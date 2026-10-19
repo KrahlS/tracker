@@ -71,6 +71,7 @@ export const DEFAULT_SETTINGS = {
   mcatWeek11Start: '2026-10-19',
   mcatDate: '2027-01-21',
   psPagesTarget: 6,
+  goalScore: 515,
   theme: 'dark',
 };
 

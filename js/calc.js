@@ -121,3 +121,36 @@ export const MCAT_ITEMS = [
   ['ps', 'Psych/Soc pages'],
   ['uw', 'Practice block'],
 ];
+
+// ---- metrics ----
+// Least-squares slope of weight in lb per week over the last `days` days (needs 4+ weigh-ins).
+export function weightRate(date, days = 21, ws = weights()) {
+  const from = addDays(date, -days);
+  const pts = ws.filter(([d]) => d > from && d <= date).map(([d, w]) => [diffDays(d, date), w]);
+  if (pts.length < 4) return null;
+  const n = pts.length, mx = pts.reduce((a, p) => a + p[0], 0) / n, my = pts.reduce((a, p) => a + p[1], 0) / n;
+  const num = pts.reduce((a, [x, y]) => a + (x - mx) * (y - my), 0), den = pts.reduce((a, [x]) => a + (x - mx) ** 2, 0);
+  return den ? num / den * 7 : null;
+}
+export function sessionE1rm(s, exId) {
+  const r = s.ex?.[exId];
+  if (!r || !r.reps?.length || !r.w) return 0;
+  return Math.max(...r.reps.filter(x => x > 0).map(x => e1rm(r.w, x)), 0);
+}
+export function bestE1rm(exId, beforeKey) {
+  return Math.max(0, ...sessions().filter(s => s.done && (!beforeKey || s.key < beforeKey)).map(s => sessionE1rm(s, exId)));
+}
+export function tonnage(s) {
+  return Object.values(s.ex || {}).reduce((a, r) => a + (r.w || 0) * (r.reps || []).reduce((x, y) => x + (y || 0), 0), 0);
+}
+export function setsHit(s) {
+  let hit = 0, tot = 0;
+  for (const e of PROGRAM[s.day].ex) { const n = plannedSets(e, s.deload); tot += n; hit += (s.ex?.[e.id]?.reps || []).slice(0, n).filter(r => r >= e.reps).length; }
+  return [hit, tot];
+}
+// Consecutive days, ending at `date` (or the day before if today is not done yet), where test(date) is true.
+export function streak(date, test) {
+  let d = test(date) ? date : addDays(date, -1), n = 0;
+  while (test(d) && n < 999) { n++; d = addDays(d, -1); }
+  return n;
+}

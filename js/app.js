@@ -27,7 +27,7 @@ function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.ad
 export { toast, esc };
 
 // ---------- charts ----------
-function chart({ series, wide = false, h = 200, xFmt, yFmt = v => fmt(v, 0), yMin, yMax, xMin, xMax }) {
+function chart({ series, wide = false, h = 200, xFmt, xTicks, yFmt = v => fmt(v, 0), yMin, yMax, xMin, xMax }) {
   // size the viewBox to the real card width so text stays the same size on every screen
   const vw = window.innerWidth, inner = Math.min(vw, 1180) - 64;
   const w = Math.round(Math.max(280, wide || vw < 760 ? inner : inner / 2 - 6));
@@ -43,7 +43,14 @@ function chart({ series, wide = false, h = 200, xFmt, yFmt = v => fmt(v, 0), yMi
   let g = '<g class="grid">';
   for (let i = 0; i <= 4; i++) { const v = y0 + (y1 - y0) * i / 4; g += `<line x1="${L}" x2="${w - R}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L - 6}" y="${Y(v) + 3}" text-anchor="end">${yFmt(v)}</text>`; }
   const ticks = w < 500 ? 3 : 5;
-  for (let i = 0; i <= ticks; i++) { const v = x0 + (x1 - x0) * i / ticks; g += `<text x="${X(v)}" y="${h - 4}" text-anchor="${i === 0 ? 'start' : i === ticks ? 'end' : 'middle'}">${xFmt ? xFmt(v) : fmt(v, 0)}</text>`; }
+  const tv = xTicks || Array.from({ length: ticks + 1 }, (_, i) => x0 + (x1 - x0) * i / ticks);
+  let prevLabel = null;
+  tv.forEach((v, i) => {
+    const label = xFmt ? xFmt(v) : fmt(v, 0);
+    if (label === prevLabel) return;
+    prevLabel = label;
+    g += `<text x="${X(v)}" y="${h - 4}" text-anchor="${v === x0 ? 'start' : v === x1 ? 'end' : 'middle'}">${esc(label)}</text>`;
+  });
   g += '</g>';
   let body = '';
   for (const s of series) {
@@ -179,7 +186,7 @@ function renderToday() {
 
     ${blocksCard(date)}
     <div class="card span2">
-      <h2>Last 14 days</h2>
+      <h2>Last 14 days <span class="right">${C.streak(date, x => { const q = dayStatus(x); return q.n === q.of; })}-day perfect streak</span></h2>
       <div class="dots">${dots}</div>
       <div class="legend" style="margin-top:8px"><span>■ all done</span><span>▨ partial</span><span>□ nothing</span></div>
     </div>
@@ -206,7 +213,9 @@ function mcatChecks(date, d, task, s) {
       <label class="field"><span class="tiny">Time m:ss</span><input type="text" inputmode="numeric" placeholder="8:30" value="${d.carsT ? Math.floor(d.carsT / 60) + ':' + String(d.carsT % 60).padStart(2, '0') : ''}" data-field="carsT"></label></div>`],
     anki: ['All reviews due today', ''],
     ps: [`${s.psPagesTarget}-7 pages`, `<div class="extra" data-stop><label class="field"><span class="tiny">Pages</span><input type="number" inputmode="numeric" value="${d.psPages ?? ''}" data-field="psPages"></label></div>`],
-    uw: [task.label + (task.exam ? ' · log scores in MCAT' : ''), ''],
+    uw: [task.label + (task.exam ? ' · log scores in MCAT' : ''), task.exam ? '' : `<div class="extra" data-stop>
+      <label class="field"><span class="tiny">Qs done</span><input type="number" inputmode="numeric" value="${d.uwQ ?? ''}" data-field="uwQ"></label>
+      <label class="field"><span class="tiny">% correct</span><input type="number" inputmode="numeric" value="${d.uwPct ?? ''}" data-field="uwPct"></label></div>`],
   };
   const labels = { cars: 'CARS passage', anki: 'Anki', ps: 'Psych/Soc reading', uw: /rest|off|sleep|pray/i.test(task.label) ? 'Scheduled' : task.exam ? 'Practice exam' : 'UWorld / AAMC / review' };
   return C.MCAT_ITEMS.map(([k]) => `
@@ -282,6 +291,20 @@ function renderLift() {
   }).join('');
 
   const hist = C.sessions().filter(x => x.done).slice(-8).reverse();
+  const isPR = x => MAIN_LIFTS.some(([id]) => { const v = C.sessionE1rm(x, id); return v > 0 && v > C.bestE1rm(id, x.key) && C.bestE1rm(id, x.key) > 0; });
+
+  // metrics
+  const t = C.today(), mon = C.mondayOf(t), done = C.sessions().filter(x => x.done);
+  const thisWeek = done.filter(x => x.date >= mon).length;
+  const recent = done.filter(x => x.date > C.addDays(t, -28));
+  const hitTot = recent.reduce((a, x) => { const [h, n] = C.setsHit(x); return [a[0] + h, a[1] + n]; }, [0, 0]);
+  let wkStreak = 0;
+  for (let m = C.addDays(mon, thisWeek >= 4 ? 0 : -7); ; m = C.addDays(m, -7)) { if (done.filter(x => x.date >= m && x.date <= C.addDays(m, 6)).length >= 4) wkStreak++; else break; }
+  const bw = C.avg7(t) || C.settings().startWeight;
+  const prs = recent.filter(isPR).length;
+  const rel = MAIN_LIFTS.map(([id, name]) => { const b = C.bestE1rm(id); return `<tr><td>${name}</td><td class="num">${b ? fmt(b, 0) : '—'}</td><td class="num">${b ? fmt(b / bw, 2) + '×' : '—'}</td></tr>`; }).join('');
+  const prevSame = done.filter(x => x.day === day && x.key < s.key).at(-1);
+  const [sHit, sTot] = C.setsHit(s), ton = C.tonnage(s);
 
   $('#v-lift').innerHTML = `
   <div class="stack">
@@ -293,18 +316,32 @@ function renderLift() {
     ${s.deload ? '<div class="banner">Deload week. Same exercises, 60% of working weight, half the sets. Recover.</div>' : ''}
     <div class="grid two">${exHtml}</div>
     <div class="card">
-      <h2>Session notes</h2>
+      <h2>Session notes <span class="right">${sHit}/${sTot} sets · ${Math.round(ton).toLocaleString()} lb moved${prevSame ? ` · last ${PROGRAM[day].name} ${Math.round(C.tonnage(prevSame)).toLocaleString()}` : ''}</span></h2>
       <textarea rows="2" style="width:100%;font-size:14px" placeholder="How it felt, machine settings, pain…" data-act="notes">${esc(s.notes || '')}</textarea>
       <div class="row" style="margin-top:10px">
         ${s.done ? `<span class="pill ok">Finished</span><button class="btn ghost sm" data-act="reopen">Reopen</button>` : `<button class="btn solid" data-act="finish">Finish workout</button>`}
         ${s.saved ? '<button class="btn ghost sm" data-act="discard">Delete session</button>' : ''}
       </div>
     </div>
+    <div class="card">
+      <h2>Lifting metrics</h2>
+      <div class="grid three" style="gap:16px">
+        <div class="row" style="gap:24px;align-items:flex-start">
+          <div><div class="big">${thisWeek}<small>/ 4</small></div><div class="tiny">sessions this week</div></div>
+          <div><div class="big">${wkStreak}</div><div class="tiny">full-week streak</div></div>
+        </div>
+        <div class="row" style="gap:24px;align-items:flex-start">
+          <div><div class="big">${hitTot[1] ? Math.round(hitTot[0] / hitTot[1] * 100) : '—'}<small>%</small></div><div class="tiny">sets hit · 28 days</div></div>
+          <div><div class="big">${prs}</div><div class="tiny">e1RM PRs · 28 days</div></div>
+        </div>
+        <div><table class="tbl"><tr><th>Best e1RM</th><th class="num">lb</th><th class="num">× BW</th></tr>${rel}</table></div>
+      </div>
+    </div>
     <div class="grid two">
       <div class="card"><h2>Main lifts</h2><div class="stack">${mains}</div></div>
       <div class="card"><h2>Recent sessions</h2>
-        ${hist.length ? `<table class="tbl"><tr><th>Date</th><th>Day</th><th class="num">Wk</th><th class="num">Sets hit</th></tr>
-        ${hist.map(x => { const tot = PROGRAM[x.day].ex.reduce((a, e) => a + C.plannedSets(e, x.deload), 0); const hit = PROGRAM[x.day].ex.reduce((a, e) => a + (x.ex?.[e.id]?.reps || []).filter(r => r >= e.reps).length, 0); return `<tr><td>${C.fmtDate(x.date)}</td><td>${PROGRAM[x.day].name}</td><td class="num">${x.week}</td><td class="num">${hit}/${tot}</td></tr>`; }).join('')}</table>` : '<p class="muted small">No finished sessions yet. Week 1 starts now.</p>'}
+        ${hist.length ? `<table class="tbl"><tr><th>Date</th><th>Day</th><th class="num">Wk</th><th class="num">Sets hit</th><th class="num">Volume</th></tr>
+        ${hist.map(x => { const tot = PROGRAM[x.day].ex.reduce((a, e) => a + C.plannedSets(e, x.deload), 0); const hit = PROGRAM[x.day].ex.reduce((a, e) => a + (x.ex?.[e.id]?.reps || []).filter(r => r >= e.reps).length, 0); return `<tr><td>${C.fmtDate(x.date)}${isPR(x) ? ' <b title="e1RM PR">★</b>' : ''}</td><td>${PROGRAM[x.day].name}</td><td class="num">${x.week}</td><td class="num">${hit}/${tot}</td><td class="num">${Math.round(C.tonnage(x)).toLocaleString()}</td></tr>`; }).join('')}</table>` : '<p class="muted small">No finished sessions yet. Week 1 starts now.</p>'}
       </div>
     </div>
   </div>`;
@@ -327,7 +364,12 @@ function liftAction(act, el) {
     case 'w': r.w = num(el.value) ?? 0; break;
     case 'hard': r.hard = !r.hard; break;
     case 'notes': s.notes = el.value; break;
-    case 'finish': s.done = true; toast('Logged. ' + QUOTES[(Date.now() / 1000 | 0) % QUOTES.length]); break;
+    case 'finish': {
+      s.done = true;
+      const pr = MAIN_LIFTS.find(([id]) => { const b = C.bestE1rm(id, s.key); return b > 0 && C.sessionE1rm(s, id) > b; });
+      toast(pr ? `New ${pr[1]} PR: e1RM ${fmt(C.sessionE1rm(s, pr[0]), 0)} lb` : 'Logged. ' + QUOTES[(Date.now() / 1000 | 0) % QUOTES.length]);
+      break;
+    }
     case 'reopen': s.done = false; break;
     case 'discard': store.remove(s.key); ui.liftDay = null; return;
     default: return;
@@ -366,7 +408,7 @@ function renderBody() {
 
   // diet history (28 days)
   let diet = '', hitK = 0, hitP = 0, logged = 0;
-  for (let i = 0; i < 28; i++) {
+  for (let i = 0; i < 14; i++) {
     const d = C.addDays(t, -i), x = C.dayDoc(d), p = C.phaseInfo(d, s);
     if (x.kcal == null && x.protein == null) continue;
     logged++;
@@ -375,11 +417,21 @@ function renderBody() {
     diet += `<tr><td>${C.fmtDate(d)}</td><td class="num">${x.kcal ?? '—'}</td><td class="num">${x.protein ?? '—'}</td><td>${ko ? '■' : '□'} kcal</td><td>${po ? '■' : '□'} protein</td></tr>`;
   }
   const kcalPts = [], protPts = [];
-  for (let i = 27; i >= 0; i--) { const d = C.addDays(t, -i), x = C.dayDoc(d); if (x.kcal != null) kcalPts.push([dayNum(d), x.kcal]); if (x.protein != null) protPts.push([dayNum(d), x.protein]); }
+  for (let i = 13; i >= 0; i--) { const d = C.addDays(t, -i), x = C.dayDoc(d); if (x.kcal != null) kcalPts.push([dayNum(d), x.kcal]); if (x.protein != null) protPts.push([dayNum(d), x.protein]); }
 
   const cutEnd = C.addDays(s.programStart, s.cutWeeks * 7 - 1), revEnd = C.addDays(cutEnd, s.reverseWeeks * 7);
   const bulkEnd = C.addDays(s.programStart, 52 * 7 - 1);
   const pNow = C.phaseInfo(t, s);
+  // trend metrics
+  const rate = C.weightRate(t, 21, ws);
+  const planRate = pNow.phase === 'cut' ? -(s.startWeight - s.cutGoal) / s.cutWeeks : pNow.phase === 'bulk' ? s.bulkRate : s.reverseRebound / s.reverseWeeks;
+  const a7now = C.avg7(t, ws);
+  const lost = a7now != null ? a7now - s.startWeight : null;
+  const eta = rate && rate < -0.05 && a7now > s.cutGoal ? C.addDays(t, Math.round((a7now - s.cutGoal) / -rate * 7)) : null;
+  let k7 = 0, p7 = 0, n7 = 0, adh7 = 0;
+  for (let i = 0; i < 7; i++) { const d = C.addDays(t, -i), x = C.dayDoc(d), pp = C.phaseInfo(d, s); if (x.kcal == null) continue; n7++; k7 += x.kcal; p7 += x.protein || 0; adh7 += x.kcal <= pp.kcal && (x.protein || 0) >= pp.protein; }
+  const dietStreak = C.streak(t, d => { const x = C.dayDoc(d), pp = C.phaseInfo(d, s); return x.kcal != null && x.kcal <= pp.kcal && (x.protein || 0) >= pp.protein; });
+  const weighStreak = C.streak(t, d => C.dayDoc(d).weight != null);
 
   $('#v-body').innerHTML = `
   <div class="grid two">
@@ -387,6 +439,25 @@ function renderBody() {
       <h2>Bodyweight <span class="right">now ${fmt(C.avg7(t, ws))} avg · target ${fmt(pNow.target)}</span></h2>
       ${wchart}
       <div class="legend"><span>▪ weigh-in</span><span><i></i>7-day avg</span><span><i class="d"></i>plan</span></div>
+    </div>
+    <div class="card span2">
+      <h2>Trend</h2>
+      <div class="grid three" style="gap:16px">
+        <div class="row" style="gap:24px;align-items:flex-start">
+          <div><div class="big">${rate == null ? '—' : (rate > 0 ? '+' : '') + fmt(rate, 2)}<small>lb/wk</small></div><div class="tiny">actual, 21-day fit</div></div>
+          <div><div class="big">${(planRate > 0 ? '+' : '') + fmt(planRate, 2)}<small>lb/wk</small></div><div class="tiny">plan</div></div>
+        </div>
+        <div class="row" style="gap:24px;align-items:flex-start">
+          <div><div class="big">${lost == null ? '—' : (lost > 0 ? '+' : '') + fmt(lost)}<small>lb</small></div><div class="tiny">change since ${C.fmtDate(s.programStart, { month: 'short', day: 'numeric' })}</div></div>
+          <div><div class="big" style="font-size:24px">${eta ? C.fmtDate(eta, { month: 'short', day: 'numeric' }) : '—'}</div><div class="tiny">${s.cutGoal} lb at this rate</div></div>
+        </div>
+        <div class="row" style="gap:24px;align-items:flex-start">
+          <div><div class="big">${n7 ? Math.round(k7 / n7) : '—'}</div><div class="tiny">avg kcal · 7d</div></div>
+          <div><div class="big">${n7 ? Math.round(p7 / n7) : '—'}<small>g</small></div><div class="tiny">avg protein · 7d</div></div>
+          <div><div class="big">${n7 ? adh7 + '/' + n7 : '—'}</div><div class="tiny">diet days hit</div></div>
+        </div>
+      </div>
+      <p class="tiny" style="margin-top:12px">Streaks: ${dietStreak} day${dietStreak === 1 ? '' : 's'} on diet · ${weighStreak} day${weighStreak === 1 ? '' : 's'} weighed in.${rate == null ? ' Loss rate needs 4 weigh-ins in 3 weeks.' : rate > planRate + 0.5 && pNow.phase === 'cut' ? ' Losing slower than plan. Two weeks like this means cut 150–200 kcal.' : ''}</p>
     </div>
     <div class="card">
       <h2>Weekly check</h2>
@@ -404,7 +475,7 @@ function renderBody() {
       <p class="small muted" style="margin-top:10px">${s.startWeight} → ${s.cutGoal} lb over ${s.cutWeeks} weeks (${fmt((s.startWeight - s.cutGoal) / s.cutWeeks, 2)} lb/wk). If the deficit collides with a heavy exam block, hold maintenance and extend the cut.</p>
     </div>
     <div class="card span2">
-      <h2>Diet, last 28 days <span class="right">${logged ? `kcal ${hitK}/${logged} · protein ${hitP}/${logged}` : ''}</span></h2>
+      <h2>Diet, last 14 days <span class="right">${logged ? `kcal ${hitK}/${logged} · protein ${hitP}/${logged}` : ''}</span></h2>
       ${kcalPts.length > 1 ? `<div class="grid two"><div><div class="tiny">Calories vs ${pNow.kcal}</div>${chart({ series: [{ pts: kcalPts.map(p => [p[0], pNow.kcal]), cls: 'ln2' }, { pts: kcalPts, dots: 'solid' }], h: 140, xFmt: dayLabel })}</div><div><div class="tiny">Protein vs ${pNow.protein}</div>${chart({ series: [{ pts: protPts.map(p => [p[0], pNow.protein]), cls: 'ln2' }, { pts: protPts, dots: 'solid' }], h: 140, xFmt: dayLabel })}</div></div>` : ''}
       ${diet ? `<div class="scroll-x"><table class="tbl"><tr><th>Day</th><th class="num">kcal</th><th class="num">Protein</th><th></th><th></th></tr>${diet}</table></div>` : '<p class="muted small">Log calories and protein on the Today tab.</p>'}
     </div>
@@ -453,6 +524,30 @@ function renderMcat() {
   const timed = last.filter(([, x]) => x.carsT);
   const avgT = timed.length ? timed.reduce((a, [, x]) => a + x.carsT, 0) / timed.length : null;
   const mmss = sec => sec == null ? '—' : `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, '0')}`;
+  const perQ = timed.length ? timed.reduce((a, [, x]) => a + x.carsT, 0) / timed.reduce((a, [, x]) => a + x.carsQ, 0) : null;
+
+  // question bank (UWorld, QPs, section banks)
+  const uw = store.keys('day:').map(k => [k.slice(4), store.get(k)]).filter(([, x]) => x.uwQ && x.uwPct != null);
+  const uwQ = uw.reduce((a, [, x]) => a + x.uwQ, 0);
+  const uwPct = uwQ ? uw.reduce((a, [, x]) => a + x.uwQ * x.uwPct, 0) / uwQ : null;
+  const uw7 = uw.filter(([d]) => d > C.addDays(t, -7)), uw7Q = uw7.reduce((a, [, x]) => a + x.uwQ, 0);
+  const uw7Pct = uw7Q ? uw7.reduce((a, [, x]) => a + x.uwQ * x.uwPct, 0) / uw7Q : null;
+  const uwRoll = uw.slice(-30).map(([d], i, arr) => { const w = arr.slice(Math.max(0, i - 4), i + 1); const q = w.reduce((a, [, x]) => a + x.uwQ, 0); return [dayNum(d), w.reduce((a, [, x]) => a + x.uwQ * x.uwPct, 0) / q]; });
+
+  // sections
+  const SECS = [['cp', 'Chem/Phys'], ['cars', 'CARS'], ['bb', 'Bio/Biochem'], ['ps', 'Psych/Soc']];
+  const full = scored.map(e => sc[e.id]);
+  const first = full[0], latest = full.at(-1), recent3 = full.slice(-3);
+  const secAvg = k => recent3.length ? recent3.reduce((a, x) => a + x[k], 0) / recent3.length : null;
+  const weakest = recent3.length ? SECS.reduce((a, b) => secAvg(b[0]) < secAvg(a[0]) ? b : a)[0] : null;
+  const goal = s.goalScore || 515;
+  const latestTot = latest ? C.examTotal(latest) : null;
+  const secRows = SECS.map(([k, n]) => `<tr class="${k === weakest ? 'next' : ''}"><td>${n}${k === weakest ? ' <span class="tiny">weakest</span>' : ''}</td><td class="num">${latest ? latest[k] : '—'}</td><td class="num">${recent3.length ? fmt(secAvg(k)) : '—'}</td><td class="num">${full.length ? Math.max(...full.map(x => x[k])) : '—'}</td><td class="num">${first && latest && full.length > 1 ? (latest[k] - first[k] >= 0 ? '+' : '') + (latest[k] - first[k]) : '—'}</td></tr>`).join('');
+
+  // streaks and per-task completion (14 days)
+  const allDone = d => C.MCAT_ITEMS.every(([k]) => C.dayDoc(d)[k]);
+  const mStreak = C.streak(t, allDone);
+  const perTask = C.MCAT_ITEMS.map(([k, n]) => { let c = 0; for (let i = 0; i < 14; i++) c += !!C.dayDoc(C.addDays(t, -i))[k]; return [n, c]; });
 
   $('#v-mcat').innerHTML = `
   <div class="grid two">
@@ -464,13 +559,33 @@ function renderMcat() {
     <div class="card span2">
       <h2>Practice exams <span class="right">${nextExam ? 'Next: ' + esc(nextExam.name) : ''}</span></h2>
       <div class="scroll-x"><table class="tbl"><tr><th>Exam</th><th>Date</th><th class="num">C/P</th><th class="num">CARS</th><th class="num">B/B</th><th class="num">P/S</th><th class="num">Total</th></tr>${exRows}</table></div>
-      ${exPts.length > 1 ? chart({ series: [{ pts: exPts, dots: 'solid' }], wide: true, h: 160, xFmt: i => (scored[Math.round(i)]?.name || '').replace('AAMC ', ''), yFmt: v => fmt(v, 0) }) : ''}
+      ${exPts.length > 1 ? chart({ series: [{ pts: exPts, dots: 'solid' }], wide: true, h: 160, xTicks: exPts.map(p => p[0]), xFmt: i => (scored[Math.round(i)]?.name || '').replace('AAMC ', ''), yFmt: v => fmt(v, 0) }) : ''}
+    </div>
+    <div class="card">
+      <h2>Score gap <span class="right">goal ${goal}</span></h2>
+      <div class="row" style="gap:24px;align-items:flex-start">
+        <div><div class="big">${latestTot ?? '—'}</div><div class="tiny">latest total</div></div>
+        <div><div class="big">${latestTot ? (goal - latestTot > 0 ? goal - latestTot : '✓') : '—'}</div><div class="tiny">${latestTot && goal - latestTot <= 0 ? 'at goal' : 'points to goal'}</div></div>
+        <div><div class="big">${full.length > 1 ? (latestTot - C.examTotal(first) >= 0 ? '+' : '') + (latestTot - C.examTotal(first)) : '—'}</div><div class="tiny">since diagnostic</div></div>
+      </div>
+      <table class="tbl" style="margin-top:12px"><tr><th>Section</th><th class="num">Latest</th><th class="num">Last 3</th><th class="num">Best</th><th class="num">Δ diag</th></tr>${secRows}</table>
+      <p class="tiny" style="margin-top:8px">Goal needs about ${fmt(goal / 4, 1)} per section. Weakest = lowest average over your last 3 exams.</p>
+    </div>
+    <div class="card">
+      <h2>Question bank <span class="right">${uwQ} Qs logged</span></h2>
+      <div class="row" style="gap:24px;align-items:flex-start">
+        <div><div class="big">${fmt(uwPct, 0)}<small>%</small></div><div class="tiny">all time</div></div>
+        <div><div class="big">${fmt(uw7Pct, 0)}<small>%</small></div><div class="tiny">last 7 days</div></div>
+        <div><div class="big">${uw7Q}</div><div class="tiny">Qs this week</div></div>
+      </div>
+      ${uwRoll.length > 1 ? chart({ series: [{ pts: uwRoll, dots: 'solid' }], h: 130, xFmt: dayLabel, yMin: 0, yMax: 100, yFmt: v => fmt(v, 0) + '%' }) : '<p class="small muted" style="margin-top:10px">Log Qs and % correct on the practice-block task each day.</p>'}
     </div>
     <div class="card">
       <h2>CARS <span class="right">last ${last.length}</span></h2>
       <div class="row" style="gap:28px">
         <div><div class="big">${fmt(accAll, 0)}<small>%</small></div><div class="tiny">accuracy</div></div>
         <div><div class="big">${mmss(avgT)}</div><div class="tiny">avg / passage</div></div>
+        <div><div class="big">${perQ ? Math.round(perQ) + '<small>s</small>' : '—'}</div><div class="tiny">per question</div></div>
       </div>
       ${roll.length > 1 ? chart({ series: [{ pts: roll }], h: 130, xFmt: dayLabel, yMin: 0, yMax: 100, yFmt: v => fmt(v, 0) + '%' }) : ''}
       <div class="tiny">7-passage rolling accuracy</div>
@@ -478,6 +593,10 @@ function renderMcat() {
     <div class="card">
       <h2>Consistency <span class="right">${Math.round(done / 112 * 100)}% of tasks · 28 days</span></h2>
       <div class="dots">${dots}</div>
+      <div class="row" style="gap:24px;margin-top:12px;align-items:flex-start">
+        <div><div class="big">${mStreak}</div><div class="tiny">day streak, all 4</div></div>
+        <table class="tbl" style="flex:1;min-width:180px">${perTask.map(([n, c]) => `<tr><td>${n}</td><td class="num">${c}/14</td></tr>`).join('')}</table>
+      </div>
       <hr>
       <h2>Key dates</h2>
       <table class="tbl">${MCAT_KEY_DATES.map(([d, l]) => `<tr class="${d >= t && MCAT_KEY_DATES.find(([x]) => x >= t)?.[0] === d ? 'next' : ''}"><td>${C.fmtDate(d, { month: 'short', day: 'numeric' })}</td><td>${esc(l)}</td><td class="num muted">${C.diffDays(d, t) >= 0 ? C.diffDays(d, t) + 'd' : 'past'}</td></tr>`).join('')}</table>
@@ -527,6 +646,7 @@ function renderSettings() {
         <label class="field"><label>Start weight</label><input type="number" step="0.1" value="${s.startWeight}" data-set="startWeight"></label>
         <label class="field"><label>Cut goal</label><input type="number" step="0.1" value="${s.cutGoal}" data-set="cutGoal"></label>
         <label class="field"><label>Cut weeks</label><input type="number" value="${s.cutWeeks}" data-set="cutWeeks"></label>
+        <label class="field"><label>MCAT goal score</label><input type="number" value="${s.goalScore}" data-set="goalScore"></label>
         <label class="field"><label>MCAT date</label><input type="date" value="${s.mcatDate}" data-set="mcatDate"></label>
         <label class="field"><label>MCAT week 11 starts</label><input type="date" value="${s.mcatWeek11Start}" data-set="mcatWeek11Start"></label>
       </div>
@@ -622,6 +742,7 @@ document.addEventListener('change', e => {
     const v = f === 'carsT' ? parseMmss(el.value) : num(el.value);
     const patch = { [f]: v };
     if (f === 'carsQ' || f === 'carsC' || f === 'carsT') { if (v != null) patch.cars = true; }
+    if ((f === 'uwQ' || f === 'uwPct') && v != null) patch.uw = true;
     if (f === 'psPages' && v != null && v >= C.settings().psPagesTarget) patch.ps = true;
     C.patchDay(date, patch);
   } else if (el.dataset.set) {
