@@ -2,7 +2,7 @@ import * as store from './store.js';
 import * as C from './calc.js';
 import { PROGRAM, ROTATION, MAIN_LIFTS, QUOTES, EXAMS, SEED_EXAMS, SEED_CARS, SEED_WEIGHTS, MCAT_KEY_DATES, DEFAULT_SETTINGS } from './data.js';
 import { renderIcon, ICON_NAMES } from './icons.js';
-import { renderPlan, handlePlan, todaysBlocks, clock as clk } from './planner.js';
+import { renderPlan, handlePlan, todaysBlocks, planSettings, clock as clk } from './planner.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -139,6 +139,11 @@ function renderToday() {
       </div>
       <div class="verdict">${a7 == null ? '' : Math.abs(a7 - p.target) <= 1 ? '<span class="pill ok">On track</span>' : a7 > p.target ? '<span class="pill bad">Above target</span>' : '<span class="pill ok">Ahead</span>'}</div>
       <div class="tiny" style="margin-top:12px">Judge the 7-day trend, never one weigh-in.</div>
+      <hr>
+      <div class="row between">
+        <label class="field"><label>Bedtime last night</label><input type="time" value="${d.bedtime ?? ''}" data-field="bedtime" data-text style="font-size:16px"></label>
+        ${sleepNote(d)}
+      </div>
     </div>
 
     <div class="card">
@@ -195,6 +200,18 @@ function renderToday() {
   const css = getComputedStyle(document.documentElement);
   renderIcon(cv, icon, css.getPropertyValue('--ink').trim(), css.getPropertyValue('--panel').trim(), doy);
 }
+
+// Hours between logged bedtime and the planner's day start, flagged when it's a short night.
+function sleepNote(d) {
+  if (!d.bedtime) return '<span class="tiny">log it after a late night</span>';
+  const [h, m] = d.bedtime.split(':').map(Number), bed = h < 12 ? h + m / 60 + 24 : h + m / 60;
+  const ps = planSettings(), [sh, sm] = ps.start.split(':').map(Number);
+  const hrs = sh + sm / 60 + 24 - bed;
+  if (bed * 60 <= hmToMin(ps.lateAfter)) return `<span class="pill ok">${fmt(hrs)} h possible</span>`;
+  const wake = bed + ps.sleep - 24;
+  return `<span class="pill bad">Late night: start after ${Math.floor(wake)}:${String(Math.round((wake % 1) * 60)).padStart(2, '0')}</span>`;
+}
+const hmToMin = t => { const [h, m] = t.split(':').map(Number); return (h < 12 ? h + 24 : h) * 60 + m; };
 
 function blocksCard(date) {
   const b = todaysBlocks(date);
@@ -736,7 +753,7 @@ document.addEventListener('change', e => {
   const date = ui.date;
   if (el.dataset.field) {
     const f = el.dataset.field;
-    const v = f === 'carsT' ? parseMmss(el.value) : num(el.value);
+    const v = f === 'carsT' ? parseMmss(el.value) : 'text' in el.dataset ? (el.value || null) : num(el.value);
     const patch = { [f]: v };
     if (f === 'carsQ' || f === 'carsC' || f === 'carsT') { if (v != null) patch.cars = true; }
     if ((f === 'uwQ' || f === 'uwPct') && v != null) patch.uw = true;

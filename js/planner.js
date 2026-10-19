@@ -13,6 +13,7 @@ const SCOPES = [
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 export const PLAN_DEFAULTS = {
   start: '06:00', end: '22:00', buffer: 15,
+  sleep: 8, lateAfter: '22:30', // late-night protection: hours of sleep after anything that runs past lateAfter
   liftDays: [0, 1, 3, 5],
   dur: { lift: 75, uw: 180, exam: 480, review: 240, cars: 30, anki: 45, ps: 30 },
   calendars: null, // null = every calendar you have selected in Google Calendar
@@ -81,7 +82,15 @@ function buildPlan(busy) {
   const days = [];
   for (let i = 0; i < 7; i++) {
     const date = C.addDays(mon, i);
-    const dayStart = at(date, hm(p.start)), dayEnd = at(date, hm(p.end));
+    let dayStart = at(date, hm(p.start));
+    const dayEnd = at(date, hm(p.end));
+    // late-night protection: if last night ran past `lateAfter` (calendar or logged bedtime), nothing starts until `sleep` hours later
+    const lateFrom = +at(C.addDays(date, -1), hm(p.lateAfter)), noon = +at(date, 12 * 60);
+    let lateEnd = Math.max(0, ...(busy || []).map(b => +new Date(b.end)).filter(e => e > lateFrom && e < noon));
+    const bed = bedtimeMs(date);
+    if (bed && bed > lateFrom) lateEnd = Math.max(lateEnd, bed);
+    let late = null;
+    if (lateEnd && lateEnd + p.sleep * 36e5 > +dayStart) { dayStart = new Date(lateEnd + p.sleep * 36e5); late = { until: lateEnd, start: +dayStart }; }
     const ev = (busy || []).map(b => [new Date(b.start), new Date(b.end)]).filter(([s, e]) => e > dayStart && s < dayEnd);
     // free intervals = window minus padded busy, minus the past
     let free = [[Math.max(dayStart, now > dayStart ? roundUp(now) : dayStart), +dayEnd]];
@@ -106,9 +115,16 @@ function buildPlan(busy) {
       } else missed.push({ kind, label, mins });
     }
     placed.sort((a, b) => (a.start || 0) - (b.start || 0));
-    days.push({ date, busy: ev, placed, missed });
+    days.push({ date, busy: ev, placed, missed, late });
   }
   return days;
+}
+// Logged bedtime for the night before `date` (day doc field `bedtime`, HH:MM). Times before noon count as after midnight.
+function bedtimeMs(date) {
+  const b = C.dayDoc(date).bedtime;
+  if (!b) return null;
+  const m = hm(b);
+  return m < 12 * 60 ? +at(date, m) : +at(C.addDays(date, -1), m);
 }
 const roundUp = d => { const x = new Date(d); x.setSeconds(0, 0); x.setMinutes(Math.ceil(x.getMinutes() / 15) * 15); return +x; };
 function subtract(free, s, e) {
@@ -136,7 +152,7 @@ async function loadBusy() {
   st.cals = list.filter(c => c.id !== p.calId && c.summary !== 'Forge');
   const ids = (p.calendars || st.cals.filter(c => c.selected !== false).map(c => c.id)).filter(id => st.cals.some(c => c.id === id));
   const mon = weekStart();
-  const fb = await gapi(token, '/freeBusy', { method: 'POST', body: JSON.stringify({ timeMin: at(mon, 0).toISOString(), timeMax: at(C.addDays(mon, 7), 0).toISOString(), items: ids.map(id => ({ id })) }) });
+  const fb = await gapi(token, '/freeBusy', { method: 'POST', body: JSON.stringify({ timeMin: at(C.addDays(mon, -1), 18 * 60).toISOString(), timeMax: at(C.addDays(mon, 7), 0).toISOString(), items: ids.map(id => ({ id })) }) });
   st.busy = Object.values(fb.calendars || {}).flatMap(c => c.busy || []);
 }
 async function pushPlan(days) {
@@ -176,6 +192,7 @@ export function renderPlan(root) {
   const dayHtml = days.map(d => `
     <div class="plan-day" ${d.date < t ? 'style="opacity:.45"' : ''}>
       <div class="tiny">${C.fmtDate(d.date)}${d.date === t ? ' · today' : ''} · ${esc(C.mcatTask(d.date).label)}</div>
+      ${d.late ? `<div class="plan-ev"><span>sleep</span><span><b>Late night (till ${clock(new Date(d.late.until))}). Day starts ${clock(new Date(d.late.start))}.</b></span></div>` : ''}
       ${d.placed.map(b => `<div class="plan-ev"><span>${b.allDay ? 'all day' : clock(new Date(b.start)) + '–' + clock(new Date(b.end))}</span><span>${esc(b.label)}</span></div>`).join('')}
       ${d.busy.map(([s, e]) => `<div class="plan-ev busy"><span>${clock(s)}–${clock(e)}</span><span>busy</span></div>`).join('')}
       ${d.missed.map(b => `<div class="plan-ev"><span>didn't fit</span><span><b>${esc(b.label)}</b> (${b.mins} min)</span></div>`).join('')}
@@ -195,7 +212,7 @@ export function renderPlan(root) {
       <p class="small muted" style="margin-top:10px">${!canCal ? 'Calendar connects once sync is set up (Setup tab). This preview ignores your other events until then.'
         : st.busyErr ? 'Calendar error: ' + esc(st.busyErr)
         : st.busy ? `Fitted around ${st.busy.length} busy blocks from your calendars.` : 'Preview ignores your events until you read your calendar.'}
-        Lifts go first thing in the morning; the day after a practice exam gets a ${p.dur.review / 60}-hour review. Re-running replaces only Forge's own blocks.</p>
+        Lifts go first thing in the morning, but never sooner than ${p.sleep} hours after a night that ran past ${p.lateAfter}; the day after a practice exam gets a ${p.dur.review / 60}-hour review. Re-running replaces only Forge's own blocks.</p>
       ${dayHtml}
     </div>
     <div class="card">
@@ -204,6 +221,8 @@ export function renderPlan(root) {
         <label class="field"><label>Day starts</label><input type="time" value="${p.start}" data-plan="start"></label>
         <label class="field"><label>Day ends</label><input type="time" value="${p.end}" data-plan="end"></label>
         <label class="field"><label>Buffer (min)</label><input type="number" value="${p.buffer}" data-plan="buffer"></label>
+        <label class="field"><label>Sleep after late nights (h)</label><input type="number" step="0.5" value="${p.sleep}" data-plan="sleep"></label>
+        <label class="field"><label>Late means past</label><input type="time" value="${p.lateAfter}" data-plan="lateAfter"></label>
       </div>
       <div class="tiny" style="margin:14px 0 6px">Lift days</div>
       <div class="row">${DAYS.map((n, i) => `<button class="toggle ${p.liftDays.includes(i) ? 'on' : ''}" data-act="liftdaypick" data-i="${i}">${n}</button>`).join('')}</div>
