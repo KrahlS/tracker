@@ -128,11 +128,6 @@ export async function signInGoogle() {
     else throw e;
   }
 }
-export async function signInEmail(email, pass, create) {
-  const { authMod, auth } = fb;
-  if (create) await authMod.createUserWithEmailAndPassword(auth, email, pass);
-  else await authMod.signInWithEmailAndPassword(auth, email, pass);
-}
 export async function signOut() { await fb.authMod.signOut(fb.auth); }
 
 // Google OAuth access token with extra scopes (for Calendar). Firebase does not refresh it,
@@ -146,7 +141,6 @@ export async function googleToken(scopes) {
   scopes.forEach(s => provider.addScope(s));
   let res;
   if (user && user.providerData.some(p => p.providerId === 'google.com')) res = await A.reauthenticateWithPopup(user, provider);
-  else if (user) res = await A.linkWithPopup(user, provider);
   else res = await A.signInWithPopup(auth, provider);
   const token = A.GoogleAuthProvider.credentialFromResult(res)?.accessToken;
   if (!token) throw new Error('Google did not return calendar access.');

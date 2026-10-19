@@ -614,9 +614,7 @@ function renderSettings() {
       ? `<p class="small">Signed in as <b>${esc(sy.email)}</b>. Status: ${esc(sy.state)}${sy.error ? ' · ' + esc(sy.error) : ''}</p><button class="btn ghost" data-act="signout">Sign out</button>`
       : `<p class="small">Sign in with the same account on every device. Status: ${esc(sy.state)}${sy.error ? ' · ' + esc(sy.error) : ''}</p>
          <div class="row"><button class="btn solid" data-act="google">Sign in with Google</button></div>
-         <hr><div class="tiny">or email</div>
-         <div class="row" style="margin-top:6px"><input type="email" id="em" placeholder="email" style="width:200px"><input type="password" id="pw" placeholder="password" style="width:140px"></div>
-         <div class="row" style="margin-top:8px"><button class="btn sm" data-act="emailin">Sign in</button><button class="btn sm ghost" data-act="emailnew">Create account</button></div>`;
+`;
   const ph = k => `<tr><td>${C.PHASE_LABEL[k]}</td><td class="num"><input type="number" style="width:70px" value="${s.phases[k].kcal}" data-set="phases.${k}.kcal"></td><td class="num"><input type="number" style="width:60px" value="${s.phases[k].protein}" data-set="phases.${k}.protein"></td></tr>`;
   $('#v-settings').innerHTML = `
   <div class="grid two">
@@ -728,7 +726,6 @@ document.addEventListener('click', async e => {
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `forge-backup-${C.today()}.json`; a.click(); break;
     }
     case 'google': try { await store.signInGoogle(); } catch (err) { toast(err.code || err.message); } break;
-    case 'emailin': case 'emailnew': try { await store.signInEmail($('#em').value, $('#pw').value, act === 'emailnew'); } catch (err) { toast(err.code || err.message); } break;
     case 'signout': await store.signOut(); break;
     default: handlePlan(act, el, { toast, render });
   }
