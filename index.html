@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Forge</title>
+  <meta name="description" content="Daily tracker for diet, weight, lifting and MCAT study.">
+  <meta name="theme-color" content="#0b0b0b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forge">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Pirata+One&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script>try { const t = JSON.parse(localStorage.getItem('forge:v1') || '{}').docs?.settings?.v?.theme; if (t) document.documentElement.dataset.theme = t; } catch {}</script>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <pattern id="halftone" width="4" height="4" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r=".8" fill="currentColor"/></pattern>
+      <symbol id="i-check" viewBox="0 0 16 16"><path d="M2 8.5l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square"/></symbol>
+      <symbol id="i-today" viewBox="0 0 20 20"><rect x="2.5" y="3.5" width="15" height="14" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 7.5h15M6 2v3M14 2v3" stroke="currentColor" stroke-width="1.3"/><rect x="8" y="10" width="4" height="4" fill="currentColor"/></symbol>
+      <symbol id="i-lift" viewBox="0 0 20 20"><path d="M1 10h18M4 6v8M6.5 4.5v11M16 6v8M13.5 4.5v11" stroke="currentColor" stroke-width="1.6" fill="none"/></symbol>
+      <symbol id="i-body" viewBox="0 0 20 20"><path d="M2 15l5-5 3 3 7-8" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M13 5h4v4" stroke="currentColor" stroke-width="1.5" fill="none"/><path d="M2 18h16" stroke="currentColor" stroke-width="1"/></symbol>
+      <symbol id="i-mcat" viewBox="0 0 20 20"><path d="M3 4h6a2 2 0 012 2v11a2 2 0 00-2-2H3zM17 4h-6M17 4v11h-6" stroke="currentColor" stroke-width="1.3" fill="none"/><path d="M5 7.5h4M5 10h4" stroke="currentColor" stroke-width="1"/></symbol>
+      <symbol id="i-plan" viewBox="0 0 20 20"><path d="M3 4h14M3 9h9M3 14h11" stroke="currentColor" stroke-width="1.5"/><rect x="14" y="7.5" width="3" height="3" fill="currentColor"/></symbol>
+      <symbol id="i-gear" viewBox="0 0 20 20"><circle cx="10" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10 1.5v3M10 15.5v3M1.5 10h3M15.5 10h3M4 4l2.1 2.1M13.9 13.9L16 16M4 16l2.1-2.1M13.9 6.1L16 4" stroke="currentColor" stroke-width="1.4"/></symbol>
+    </defs>
+  </svg>
+
+  <header class="top">
+    <div class="logo">Forge<small id="topdate"></small></div>
+    <button class="sync-dot" id="syncdot" data-go="settings"><i></i><span>Local</span></button>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button data-go="today" class="active"><svg><use href="#i-today"/></svg>Today</button>
+    <button data-go="lift"><svg><use href="#i-lift"/></svg>Lift</button>
+    <button data-go="body"><svg><use href="#i-body"/></svg>Body</button>
+    <button data-go="mcat"><svg><use href="#i-mcat"/></svg>MCAT</button>
+    <button data-go="plan"><svg><use href="#i-plan"/></svg>Plan</button>
+    <button data-go="settings"><svg><use href="#i-gear"/></svg>Setup</button>
+  </nav>
+
+  <main>
+    <section class="view active" id="v-today"></section>
+    <section class="view" id="v-lift"></section>
+    <section class="view" id="v-body"></section>
+    <section class="view" id="v-mcat"></section>
+    <section class="view" id="v-plan"></section>
+    <section class="view" id="v-settings"></section>
+  </main>
+  <div class="toast" id="toast"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
