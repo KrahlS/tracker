@@ -207,8 +207,8 @@ function sleepNote(d) {
   const [h, m] = d.bedtime.split(':').map(Number), bed = h < 12 ? h + m / 60 + 24 : h + m / 60;
   const ps = planSettings(), [sh, sm] = ps.start.split(':').map(Number);
   const hrs = sh + sm / 60 + 24 - bed;
-  if (bed * 60 <= hmToMin(ps.lateAfter)) return `<span class="pill ok">${fmt(hrs)} h possible</span>`;
   const wake = bed + ps.sleep - 24;
+  if (bed * 60 <= hmToMin(ps.lateAfter) || wake <= sh + sm / 60) return `<span class="pill ok">${fmt(hrs)} h possible</span>`;
   return `<span class="pill bad">Late night: start after ${Math.floor(wake)}:${String(Math.round((wake % 1) * 60)).padStart(2, '0')}</span>`;
 }
 const hmToMin = t => { const [h, m] = t.split(':').map(Number); return (h < 12 ? h + 24 : h) * 60 + m; };

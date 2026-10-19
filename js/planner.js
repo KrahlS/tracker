@@ -73,7 +73,7 @@ function liftDates(mon, p) {
   return picked.map(j => C.addDays(mon, j)).filter(d => d >= t).slice(0, want);
 }
 
-function buildPlan(busy) {
+export function buildPlan(busy) {
   const p = planSettings(), mon = weekStart(), now = new Date();
   const lifts = liftDates(mon, p);
   let rot = ROTATION.indexOf(C.nextDay());
@@ -86,7 +86,10 @@ function buildPlan(busy) {
     const dayEnd = at(date, hm(p.end));
     // late-night protection: if last night ran past `lateAfter` (calendar or logged bedtime), nothing starts until `sleep` hours later
     const lateFrom = +at(C.addDays(date, -1), hm(p.lateAfter)), noon = +at(date, 12 * 60);
-    let lateEnd = Math.max(0, ...(busy || []).map(b => +new Date(b.end)).filter(e => e > lateFrom && e < noon));
+    // only events that were still running overnight count: started before this morning's window,
+    // ended after `lateAfter` last night, and aren't all-day blocks (those span 24h and mean nothing about sleep)
+    let lateEnd = Math.max(0, ...(busy || []).map(b => [+new Date(b.start), +new Date(b.end)])
+      .filter(([s, e]) => e > lateFrom && e < noon && s < +dayStart && e - s < 16 * 36e5).map(([, e]) => e));
     const bed = bedtimeMs(date);
     if (bed && bed > lateFrom) lateEnd = Math.max(lateEnd, bed);
     let late = null;
