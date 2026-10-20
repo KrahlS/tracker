@@ -1,4 +1,4 @@
-// Weekly planner: reads busy times from Google Calendar, fits lifting and MCAT blocks into
+// Weekly planner: reads your events from Google Calendar, fits lifting and MCAT blocks into
 // the gaps, and writes them to a separate "Forge" calendar (replacing only its own events).
 import * as store from './store.js';
 import * as C from './calc.js';
@@ -7,6 +7,7 @@ import { PROGRAM, ROTATION } from './data.js';
 const API = 'https://www.googleapis.com/calendar/v3';
 const SCOPES = [
   'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
+  'https://www.googleapis.com/auth/calendar.events.readonly',
   'https://www.googleapis.com/auth/calendar.freebusy',
   'https://www.googleapis.com/auth/calendar.app.created',
 ];
@@ -86,15 +87,15 @@ export function buildPlan(busy) {
     const dayEnd = at(date, hm(p.end));
     // late-night protection: if last night ran past `lateAfter` (calendar or logged bedtime), nothing starts until `sleep` hours later
     const lateFrom = +at(C.addDays(date, -1), hm(p.lateAfter)), noon = +at(date, 12 * 60);
-    // only events that were still running overnight count: started before this morning's window,
-    // ended after `lateAfter` last night, and aren't all-day blocks (those span 24h and mean nothing about sleep)
+    // only events still running overnight count: started before this morning's window and ended
+    // after `lateAfter` last night (an overnight shift ending at 7am counts; a 9am class does not)
     let lateEnd = Math.max(0, ...(busy || []).map(b => [+new Date(b.start), +new Date(b.end)])
-      .filter(([s, e]) => e > lateFrom && e < noon && s < +dayStart && e - s < 16 * 36e5).map(([, e]) => e));
+      .filter(([s, e]) => e > lateFrom && e < noon && s < +dayStart).map(([, e]) => e));
     const bed = bedtimeMs(date);
     if (bed && bed > lateFrom) lateEnd = Math.max(lateEnd, bed);
     let late = null;
     if (lateEnd && lateEnd + p.sleep * 36e5 > +dayStart) { dayStart = new Date(lateEnd + p.sleep * 36e5); late = { until: lateEnd, start: +dayStart }; }
-    const ev = (busy || []).map(b => [new Date(b.start), new Date(b.end)]).filter(([s, e]) => e > dayStart && s < dayEnd);
+    const ev = (busy || []).map(b => [new Date(b.start), new Date(b.end), b.title]).filter(([s, e]) => e > dayStart && s < dayEnd);
     // free intervals = window minus padded busy, minus the past
     let free = [[Math.max(dayStart, now > dayStart ? roundUp(now) : dayStart), +dayEnd]];
     for (const [s, e] of ev) free = subtract(free, +s - p.buffer * 6e4, +e + p.buffer * 6e4);
@@ -145,6 +146,7 @@ async function gapi(token, path, opts = {}) {
   const r = await fetch(API + path, { ...opts, headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', ...(opts.headers || {}) } });
   if (r.status === 204) return null;
   const j = await r.json().catch(() => ({}));
+  if (r.status === 401) { store.dropGoogleToken(); throw new Error('Google access expired. Tap again to reconnect.'); }
   if (!r.ok) throw new Error(j.error?.message || 'Calendar error ' + r.status);
   return j;
 }
@@ -154,9 +156,29 @@ async function loadBusy() {
   const list = (await gapi(token, '/users/me/calendarList?minAccessRole=freeBusyReader')).items || [];
   st.cals = list.filter(c => c.id !== p.calId && c.summary !== 'Forge');
   const ids = (p.calendars || st.cals.filter(c => c.selected !== false).map(c => c.id)).filter(id => st.cals.some(c => c.id === id));
-  const mon = weekStart();
-  const fb = await gapi(token, '/freeBusy', { method: 'POST', body: JSON.stringify({ timeMin: at(C.addDays(mon, -1), 18 * 60).toISOString(), timeMax: at(C.addDays(mon, 7), 0).toISOString(), items: ids.map(id => ({ id })) }) });
-  st.busy = Object.values(fb.calendars || {}).flatMap(c => c.busy || []);
+  const mon = weekStart(), q = `singleEvents=true&maxResults=2500&timeMin=${at(C.addDays(mon, -1), 0).toISOString()}&timeMax=${at(C.addDays(mon, 7), 0).toISOString()}`;
+  // read events rather than free/busy: shifts from subscribed or "free"-marked calendars still count.
+  // all-day events (holidays, birthdays, exam-day markers) and ones you declined are ignored.
+  const busy = [], errs = [];
+  const fbOnly = ids.filter(id => st.cals.find(c => c.id === id)?.accessRole === 'freeBusyReader');
+  if (fbOnly.length) { // calendars shared with you as free/busy only: events can't be read, so use busy blocks
+    const fbr = await gapi(token, '/freeBusy', { method: 'POST', body: JSON.stringify({ timeMin: at(C.addDays(mon, -1), 0).toISOString(), timeMax: at(C.addDays(mon, 7), 0).toISOString(), items: fbOnly.map(id => ({ id })) }) });
+    busy.push(...Object.values(fbr.calendars || {}).flatMap(c => c.busy || []));
+  }
+  await Promise.all(ids.filter(id => !fbOnly.includes(id)).map(async id => {
+    try {
+      const items = (await gapi(token, `/calendars/${encodeURIComponent(id)}/events?${q}`)).items || [];
+      for (const e of items) {
+        if (e.status === 'cancelled' || !e.start?.dateTime || !e.end?.dateTime) continue;
+        if ((e.attendees || []).some(a => a.self && a.responseStatus === 'declined')) continue;
+        busy.push({ start: e.start.dateTime, end: e.end.dateTime, title: e.summary || '' });
+      }
+    } catch (e) { errs.push((st.cals.find(c => c.id === id)?.summary || id) + ': ' + e.message); }
+  }));
+  st.busy = busy;
+  st.calErrs = errs;
+  // keep the week's events so Today can list them by name next to the planned blocks
+  store.set('calev:' + mon, busy.map(b => ({ start: +new Date(b.start), end: +new Date(b.end), title: b.title || '' })));
 }
 async function pushPlan(days) {
   const token = await store.googleToken(SCOPES);
@@ -196,8 +218,9 @@ export function renderPlan(root) {
     <div class="plan-day" ${d.date < t ? 'style="opacity:.45"' : ''}>
       <div class="tiny">${C.fmtDate(d.date)}${d.date === t ? ' · today' : ''} · ${esc(C.mcatTask(d.date).label)}</div>
       ${d.late ? `<div class="plan-ev"><span>sleep</span><span><b>Late night (till ${clock(new Date(d.late.until))}). Day starts ${clock(new Date(d.late.start))}.</b></span></div>` : ''}
-      ${d.placed.map(b => `<div class="plan-ev"><span>${b.allDay ? 'all day' : clock(new Date(b.start)) + '–' + clock(new Date(b.end))}</span><span>${esc(b.label)}</span></div>`).join('')}
-      ${d.busy.map(([s, e]) => `<div class="plan-ev busy"><span>${clock(s)}–${clock(e)}</span><span>busy</span></div>`).join('')}
+      ${[...d.placed.map(b => [b.allDay ? 0 : +new Date(b.start), `<div class="plan-ev"><span>${b.allDay ? 'all day' : clock(new Date(b.start)) + '–' + clock(new Date(b.end))}</span><span>${esc(b.label)}</span></div>`]),
+         ...d.busy.map(([s, e, title]) => [+s, `<div class="plan-ev busy"><span>${clock(s)}–${clock(e)}</span><span>${esc(title || 'busy')}</span></div>`])]
+        .sort((a, b) => a[0] - b[0]).map(x => x[1]).join('')}
       ${d.missed.map(b => `<div class="plan-ev"><span>didn't fit</span><span><b>${esc(b.label)}</b> (${b.mins} min)</span></div>`).join('')}
       ${!d.placed.length && !d.missed.length ? '<div class="plan-ev busy"><span></span><span>Nothing planned</span></div>' : ''}
     </div>`).join('');
@@ -214,7 +237,7 @@ export function renderPlan(root) {
       </div>
       <p class="small muted" style="margin-top:10px">${!canCal ? 'Calendar connects once sync is set up (Setup tab). This preview ignores your other events until then.'
         : st.busyErr ? 'Calendar error: ' + esc(st.busyErr)
-        : st.busy ? `Fitted around ${st.busy.length} busy blocks from your calendars.` : 'Preview ignores your events until you read your calendar.'}
+        : st.busy ? `Fitted around ${st.busy.length} events from your calendars.${st.calErrs?.length ? ' Could not read ' + esc(st.calErrs.join('; ')) + '.' : ''}` : 'Preview ignores your events until you read your calendar.'}
         Lifts go first thing in the morning, but never sooner than ${p.sleep} hours after a night that ran past ${p.lateAfter}; the day after a practice exam gets a ${p.dur.review / 60}-hour review. Re-running replaces only Forge's own blocks.</p>
       ${dayHtml}
     </div>
@@ -284,4 +307,11 @@ export { clock };
 export function todaysBlocks(date) {
   const saved = store.get('plan:' + C.mondayOf(date));
   return saved?.find(d => d.date === date)?.blocks || null;
+}
+// your own calendar events overlapping this date (saved the last time Plan read your calendar)
+export function todaysEvents(date) {
+  const ev = store.get('calev:' + C.mondayOf(date));
+  if (!ev) return null;
+  const s = +at(date, 0), e = +at(C.addDays(date, 1), 0);
+  return ev.filter(x => x.end > s && x.start < e);
 }

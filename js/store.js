@@ -128,22 +128,31 @@ export async function signInGoogle() {
     else throw e;
   }
 }
-export async function signOut() { await fb.authMod.signOut(fb.auth); }
+export async function signOut() { dropGoogleToken(); await fb.authMod.signOut(fb.auth); }
 
 // Google OAuth access token with extra scopes (for Calendar). Firebase does not refresh it,
 // so it is cached for 50 minutes and a new popup is shown after that.
+// the Calendar access token lives about an hour; keep it across reloads so syncing doesn't
+// prompt every time, and when it runs out ask Google again with your account pre-filled
+// (Google skips the chooser and consent screens once you've granted them, so the popup just closes).
+const TOK_KEY = 'forge:caltok';
 let calTok = null;
+try { calTok = JSON.parse(localStorage.getItem(TOK_KEY) || 'null'); } catch { calTok = null; }
+export function dropGoogleToken() { calTok = null; try { localStorage.removeItem(TOK_KEY); } catch {} }
 export async function googleToken(scopes) {
-  if (calTok && calTok.exp > Date.now()) return calTok.token;
+  const uid = user?.uid || null;
+  if (calTok && calTok.exp > Date.now() && calTok.uid === uid && scopes.every(s => calTok.scopes?.includes(s))) return calTok.token;
   if (!fb) throw new Error('Sync is not set up yet, so Google sign-in is unavailable.');
   const { authMod: A, auth } = fb;
   const provider = new A.GoogleAuthProvider();
   scopes.forEach(s => provider.addScope(s));
+  if (user?.email) provider.setCustomParameters({ login_hint: user.email });
   let res;
   if (user && user.providerData.some(p => p.providerId === 'google.com')) res = await A.reauthenticateWithPopup(user, provider);
   else res = await A.signInWithPopup(auth, provider);
   const token = A.GoogleAuthProvider.credentialFromResult(res)?.accessToken;
   if (!token) throw new Error('Google did not return calendar access.');
-  calTok = { token, exp: Date.now() + 50 * 60e3 };
+  calTok = { token, exp: Date.now() + 55 * 60e3, uid: res.user?.uid || uid, scopes };
+  try { localStorage.setItem(TOK_KEY, JSON.stringify(calTok)); } catch {}
   return token;
 }

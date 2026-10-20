@@ -27,7 +27,7 @@ Follow the steps below once to put it online and sync your phone and desktop.
 1. Open <https://console.cloud.google.com/apis/library/calendar-json.googleapis.com> and pick the `forge` project in the top bar. Click **Enable**.
 2. Open <https://console.cloud.google.com/auth/audience> (same project). Leave the app in **Testing**, then under **Test users** click **Add users** and add your own Gmail address.
 3. When you first click **Read my calendar**, Google will warn that the app isn't verified. That's expected for a personal app. Click **Continue**.
-   Forge asks for three narrow permissions: see your list of calendars, see when you're busy (not what your events are), and manage only the calendars it creates. It writes its blocks to a separate calendar called **Forge**.
+   Forge asks to see your list of calendars, read your events (so it can plan around them and show them by name on Today), see free/busy for calendars shared with you, and manage only the calendars it creates. Nothing is written to your own calendars. It writes its blocks to a separate calendar called **Forge**.
 
 ## 4. Lock the database to your account
 

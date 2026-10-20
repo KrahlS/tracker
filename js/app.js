@@ -2,7 +2,7 @@ import * as store from './store.js';
 import * as C from './calc.js';
 import { PROGRAM, ROTATION, MAIN_LIFTS, QUOTES, EXAMS, SEED_EXAMS, SEED_CARS, SEED_WEIGHTS, MCAT_KEY_DATES, DEFAULT_SETTINGS } from './data.js';
 import { renderIcon, ICON_NAMES } from './icons.js';
-import { renderPlan, handlePlan, todaysBlocks, planSettings, clock as clk } from './planner.js';
+import { renderPlan, handlePlan, todaysBlocks, todaysEvents, planSettings, clock as clk } from './planner.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -214,11 +214,14 @@ function sleepNote(d) {
 const hmToMin = t => { const [h, m] = t.split(':').map(Number); return (h < 12 ? h + 24 : h) * 60 + m; };
 
 function blocksCard(date) {
-  const b = todaysBlocks(date);
-  if (!b) return '';
+  const b = todaysBlocks(date), ev = todaysEvents(date);
+  if (!b && !ev?.length) return '';
   const clock = t => clk(new Date(t));
+  const rows = [...(b || []).map(x => [x.allDay ? 0 : +new Date(x.start), `<div class="plan-ev"><span>${x.allDay ? 'all day' : clock(x.start) + '–' + clock(x.end)}</span><span>${esc(x.label)}</span></div>`]),
+    ...(ev || []).map(x => [x.start, `<div class="plan-ev busy"><span>${clock(x.start)}–${clock(x.end)}</span><span>${esc(x.title || 'busy')}</span></div>`])]
+    .sort((x, y) => x[0] - y[0]).map(x => x[1]);
   return `<div class="card"><h2>Schedule <span class="right">from Plan</span></h2>
-    ${b.length ? b.map(x => `<div class="plan-ev"><span>${x.allDay ? 'all day' : clock(x.start) + '–' + clock(x.end)}</span><span>${esc(x.label)}</span></div>`).join('') : '<p class="muted small">Nothing planned.</p>'}</div>`;
+    ${rows.length ? rows.join('') : '<p class="muted small">Nothing planned.</p>'}</div>`;
 }
 
 function mcatChecks(date, d, task, s) {
