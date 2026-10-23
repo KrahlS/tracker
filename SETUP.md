@@ -38,3 +38,12 @@ After you sign in once, copy your User UID from **Authentication → Users**, pu
 - Open the site on your phone, then **Share → Add to Home Screen**. It opens full screen like an app, and works with no signal at the gym.
 - On each device, go to **Setup → Sign in with Google**. Everything you log syncs live between devices.
 - **Setup → Export JSON** saves a backup file whenever you want one.
+
+## 6. UWorld misses and Anki (Mac)
+
+1. In Anki on your Mac, go to **Tools → Add-ons → Get Add-ons** and enter `2055492159` (AnkiConnect). Restart Anki.
+2. Make sure Anki is signed in to AnkiWeb (**Sync** works), so changes reach Anki on your iPhone.
+3. Get an API key at <https://console.anthropic.com/settings/keys>. In Forge, open **MCAT → UWorld misses → Setup on this device** and paste it. It stays in that browser only and is never synced. Each drafted card costs a few cents.
+4. With Anki open, click **Connect Anki** in Chrome. Anki shows a popup asking to allow `https://krahls.github.io`. Click **Yes** (Chrome may also ask to allow local network access).
+
+Log missed question IDs anywhere (Today's UWorld task or the MCAT tab). Back on the Mac, **Reset in Anki** sends every card tagged `#AK_MCAT_v2::#UWorld::<id>` back to new, at the front of the new queue. IDs with no card show **needs a card**: paste UWorld's explanation, draft, edit if needed, and add. New cards use the AnKing note type, go in the **UWorld Misses** deck, and are tagged with the same UWorld tag, so a repeat miss resets them too. Forge asks Anki to sync after each run.

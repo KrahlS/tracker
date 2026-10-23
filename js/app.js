@@ -3,6 +3,7 @@ import * as C from './calc.js';
 import { PROGRAM, ROTATION, MAIN_LIFTS, QUOTES, EXAMS, SEED_EXAMS, SEED_CARS, SEED_WEIGHTS, MCAT_KEY_DATES, DEFAULT_SETTINGS } from './data.js';
 import { renderIcon, ICON_NAMES } from './icons.js';
 import { renderPlan, handlePlan, todaysBlocks, todaysEvents, planSettings, clock as clk } from './planner.js';
+import { renderMisses, handleMisses, handleMissField } from './anki.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -235,7 +236,8 @@ function mcatChecks(date, d, task, s) {
     ps: [`${s.psPagesTarget}-7 pages`, `<div class="extra" data-stop><label class="field"><span class="tiny">Pages</span><input type="number" inputmode="numeric" value="${d.psPages ?? ''}" data-field="psPages"></label></div>`],
     uw: [task.label + (task.exam ? ' · log scores in MCAT' : ''), task.exam ? '' : `<div class="extra" data-stop>
       <label class="field"><span class="tiny">Qs done</span><input type="number" inputmode="numeric" value="${d.uwQ ?? ''}" data-field="uwQ"></label>
-      <label class="field"><span class="tiny">% correct</span><input type="number" inputmode="numeric" value="${d.uwPct ?? ''}" data-field="uwPct"></label></div>`],
+      <label class="field"><span class="tiny">% correct</span><input type="number" inputmode="numeric" value="${d.uwPct ?? ''}" data-field="uwPct"></label>
+      <label class="field"><span class="tiny">Missed IDs</span><input type="text" inputmode="numeric" placeholder="401649 402586" data-uw="add" style="width:150px"></label></div>`],
   };
   const labels = { cars: 'CARS passage', anki: 'Anki', ps: 'Psych/Soc reading', uw: /rest|off|sleep|pray/i.test(task.label) ? 'Scheduled' : task.exam ? 'Practice exam' : 'UWorld / AAMC / review' };
   return C.MCAT_ITEMS.map(([k]) => `
@@ -576,6 +578,7 @@ function renderMcat() {
       <div class="week">${week}</div>
       <p class="tiny" style="margin-top:10px">Marks: CARS · Anki · Psych/Soc · practice block. Exam slots take the next exam you haven't scored.</p>
     </div>
+    ${renderMisses()}
     <div class="card span2">
       <h2>Practice exams <span class="right">${nextExam ? 'Next: ' + esc(nextExam.name) : ''}</span></h2>
       <div class="scroll-x"><table class="tbl"><tr><th>Exam</th><th>Date</th><th class="num">C/P</th><th class="num">CARS</th><th class="num">B/B</th><th class="num">P/S</th><th class="num">Total</th></tr>${exRows}</table></div>
@@ -747,7 +750,7 @@ document.addEventListener('click', async e => {
     }
     case 'google': try { await store.signInGoogle(); } catch (err) { toast(err.code || err.message); } break;
     case 'signout': await store.signOut(); break;
-    default: handlePlan(act, el, { toast, render });
+    default: if (!(await handleMisses(act, el, { toast, render }))) handlePlan(act, el, { toast, render });
   }
 });
 
@@ -784,6 +787,9 @@ document.addEventListener('change', e => {
     f.text().then(t => { store.importDocs(JSON.parse(t)); toast('Imported'); }).catch(() => toast('Not a valid backup'));
   } else if (el.dataset.act === 'notes' || el.dataset.act === 'w' || el.dataset.act === 'repin') {
     liftAction(el.dataset.act, el);
+  } else if (el.dataset.uw) {
+    const n = handleMissField(el);
+    if (n) toast(`${n} miss${n === 1 ? '' : 'es'} logged`);
   } else if (el.dataset.plan) {
     handlePlan('planset', el, { toast, render });
   }
