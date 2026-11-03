@@ -97,7 +97,9 @@ export const MCAT_WEEKS = [
 // Exams in the order they get taken. Each 'EXAM' slot on the schedule takes the next one not yet scored.
 export const EXAMS = [
   { id: 'diag', name: 'Diagnostic', slot: false },
-  { id: 'bp1', name: 'BP 1' }, { id: 'bp2', name: 'BP 2' }, { id: 'bp3', name: 'BP 3' }, { id: 'bp4', name: 'BP 4' },
+  { id: 'bp1', name: 'BP 1' }, { id: 'bp2', name: 'BP 2' },
+  // BP 3 and 4 dropped from the schedule 2026-11-03 so AAMC FL 1-4 land before the Dec 22 checkpoint. Still loggable.
+  { id: 'bp3', name: 'BP 3 (extra)', slot: false }, { id: 'bp4', name: 'BP 4 (extra)', slot: false },
   { id: 'aamcs', name: 'AAMC Sample' },
   { id: 'aamc1', name: 'AAMC FL 1' }, { id: 'aamc2', name: 'AAMC FL 2' }, { id: 'aamc3', name: 'AAMC FL 3' },
   { id: 'aamc4', name: 'AAMC FL 4' }, { id: 'aamc5', name: 'AAMC FL 5' }, { id: 'aamc6', name: 'AAMC FL 6 (optional)' },
