@@ -16,11 +16,11 @@ export const PLAN_DEFAULTS = {
   start: '06:00', end: '22:00', buffer: 15,
   sleep: 8, lateAfter: '22:30', // late-night protection: hours of sleep after anything that runs past lateAfter
   liftDays: [0, 1, 3, 5],
-  dur: { lift: 75, uw: 180, exam: 480, review: 240, cars: 30, anki: 45, ps: 30 },
+  dur: { lift: 75, uw: 180, uwSun: 240, exam: 480, review: 240, cars: 30, anki: 45, ps: 30 },
   calendars: null, // null = every calendar you have selected in Google Calendar
   calId: null,
 };
-const DUR_LABEL = { lift: 'Lift', uw: 'UWorld / QBank block', exam: 'Practice exam', review: 'Exam review', cars: 'CARS', anki: 'Anki', ps: 'Psych/Soc' };
+const DUR_LABEL = { lift: 'Lift', uw: 'UWorld / QBank block', uwSun: 'Sunday UWorld block', exam: 'Practice exam', review: 'Exam review', cars: 'CARS', anki: 'Anki', ps: 'Psych/Soc' };
 
 const st = { week: 'this', busy: null, cals: null, plan: null, busyErr: '', working: false };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -50,7 +50,7 @@ function mcatBlocks(date, p) {
   const examDay = !!t.exam || /exam slot/i.test(L);
   if (examDay) out.push(['exam', `Practice exam: ${L}`, p.dur.exam]);
   else if (prev.exam || /exam review|review fl/i.test(L)) out.push(['review', `Exam review${prev.exam ? ': ' + prev.label : ''}`, p.dur.review]);
-  else if (/uworld|qp|sec bank|review|catch-up/i.test(L)) out.push(['uw', L.replace('(60, untimed)', '60 Qs untimed'), /light/i.test(L) ? Math.round(p.dur.uw * 2 / 3) : p.dur.uw]);
+  else if (/uworld|qp|sec bank|review|catch-up/i.test(L)) out.push(['uw', L.replace('(60, untimed)', '60 Qs untimed'), /light/i.test(L) ? Math.round(p.dur.uw * 2 / 3) : C.parse(date).getDay() === 0 ? p.dur.uwSun : p.dur.uw]);
   if (!off && !examDay) {
     out.push(['cars', date > '2026-12-13' ? 'CARS: AAMC QBank' : 'CARS: Jack Westin passage', p.dur.cars]);
     out.push(['ps', 'Psych/Soc 6-7 pages', p.dur.ps]);
