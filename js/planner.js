@@ -2,7 +2,7 @@
 // the gaps, and writes them to a separate "Forge" calendar (replacing only its own events).
 import * as store from './store.js';
 import * as C from './calc.js';
-import { PROGRAM, ROTATION } from './data.js';
+import { PROGRAM, ROTATION, MCAT_AAMC_START } from './data.js';
 
 const API = 'https://www.googleapis.com/calendar/v3';
 const SCOPES = [
@@ -50,9 +50,9 @@ function mcatBlocks(date, p) {
   const examDay = !!t.exam || /exam slot/i.test(L);
   if (examDay) out.push(['exam', `Practice exam: ${L}`, p.dur.exam]);
   else if (prev.exam || /exam review|review fl/i.test(L)) out.push(['review', `Exam review${prev.exam ? ': ' + prev.label : ''}`, p.dur.review]);
-  else if (/uworld|qp|sec bank|review|catch-up/i.test(L)) out.push(['uw', L.replace('(60, untimed)', '60 Qs untimed'), /light/i.test(L) ? Math.round(p.dur.uw * 2 / 3) : p.dur.uw]);
+  else if (/uworld|qp|sec bank|review|catch-up|weak topics|redo|high yield/i.test(L)) out.push(['uw', L.replace('(60, untimed)', '60 Qs untimed'), /light/i.test(L) ? Math.round(p.dur.uw * 2 / 3) : p.dur.uw]);
   if (!off && !examDay) {
-    out.push(['cars', date > '2026-12-13' ? 'CARS: AAMC QBank' : 'CARS: Jack Westin passage', p.dur.cars]);
+    out.push(['cars', date >= MCAT_AAMC_START ? 'CARS: AAMC QBank' : 'CARS: Jack Westin passage', p.dur.cars]);
     out.push(['ps', 'Psych/Soc 6-7 pages', p.dur.ps]);
   }
   out.push(['anki', 'Anki reviews', p.dur.anki]);

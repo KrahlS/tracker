@@ -69,30 +69,56 @@ export const DEFAULT_SETTINGS = {
     { name: 'Protein shake', kcal: 772, protein: 98 },
   ],
   mcatWeek11Start: '2026-10-19',
-  mcatDate: '2027-01-21',
+  mcatDate: '2027-03-06',
   psPagesTarget: 6,
   goalScore: 515,
   theme: 'dark',
 };
 
-// MCAT schedule from the spreadsheet, Mon..Sun. Week 10 starts 2026-10-12.
+// MCAT schedule, Mon..Sun. Week 10 starts 2026-10-12. Rebuilt 2026-11-03 for the Mar 6 2027 test date.
+// Day CARS switches from Jack Westin to the AAMC CARS QBank.
+export const MCAT_AAMC_START = '2027-01-11';
 export const MCAT_FIRST_WEEK = 10;
 export const MCAT_WEEKS = [
   ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'Rest'],
   ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'Rest'],
   ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'Rest'],
+  // w13 Nov 2-8
   ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'Rest'],
+  // w14 Nov 9-15
   ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'Rest'],
+  // w15 Nov 16-22
   ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'Rest'],
+  // w16 Nov 23-29
   ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'Thanksgiving', 'Catch-up / lazy', 'Rest', 'Rest'],
+  // w17 Nov 30-Dec 6
   ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'Rest'],
-  ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'Rest'],
+  // w18 Dec 7-13
+  ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'Weak topics (from BP exams)', 'Weak topics', 'Rest'],
+  // w19 Dec 14-20, genetics finals
+  ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'Light: Anki + CARS', 'Weak topics', 'Rest'],
+  // w20 Dec 21-27
+  ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'Christmas Eve (off)', 'Christmas (off)', 'Weak topics', 'Rest'],
+  // w21 Dec 28-Jan 3, last UWorld week
+  ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', "New Year's (off)", 'EXAM', 'Exam review'],
+  // w22 Jan 4-10, California
+  ['California: Anki + CARS only', 'California: Anki + CARS only', 'California: Anki + CARS only', 'California: Anki + CARS only', 'California: Anki + CARS only', 'California: Anki + CARS only', 'California: Anki + CARS only'],
+  // w23 Jan 11-17, AAMC phase starts
   ['Chem QP (Q1-60)', 'Physics QP (Q1-60)', 'Bio QP 1 (Q1-60)', 'Bio QP 2 (Q1-60)', 'EXAM', 'Exam review', 'Rest'],
-  ['Chem QP (Q61-120)', 'Physics QP (Q61-120)', 'Bio QP 1 (Q61-120)', 'Christmas Eve (off)', 'Christmas (off)', 'Bio QP 2 (Q61-120)', 'Rest'],
-  ['Sec Bank 1: C/P (Q1-50)', 'Sec Bank 1: B/B (Q1-50)', 'Sec Bank 1: P/S (Q1-50)', 'Sec Bank 1: C/P (Q51-100)', "New Year's (off)", 'EXAM', 'Exam review'],
+  // w24 Jan 18-24
+  ['Chem QP (Q61-120)', 'Physics QP (Q61-120)', 'Bio QP 1 (Q61-120)', 'Bio QP 2 (Q61-120)', 'EXAM', 'Exam review', 'Rest'],
+  // w25 Jan 25-31
+  ['Sec Bank 1: C/P (Q1-50)', 'Sec Bank 1: B/B (Q1-50)', 'Sec Bank 1: P/S (Q1-50)', 'Sec Bank 1: C/P (Q51-100)', 'EXAM', 'Exam review', 'Rest'],
+  // w26 Feb 1-7
   ['Sec Bank 1: B/B (Q51-100)', 'Sec Bank 1: P/S (Q51-100)', 'Sec Bank 2: C/P (Q1-50)', 'Sec Bank 2: B/B (Q1-50)', 'EXAM', 'Exam review', 'Rest'],
-  ['Sec Bank 2: P/S (Q1-50)', 'Sec Bank 2: C/P (Q51-100)', 'Sec Bank 2: B/B (Q51-100)', 'Sec Bank 2: P/S (Q51-100)', 'Review FL mistakes', 'Light review', 'Rest'],
-  ['Review weak topics', 'Review high yield', "Pray / DON'T STUDY", 'MCAT', 'Sleep', 'Rest', 'Rest'],
+  // w27 Feb 8-14
+  ['Sec Bank 2: P/S (Q1-50)', 'Sec Bank 2: C/P (Q51-100)', 'Sec Bank 2: B/B (Q51-100)', 'Sec Bank 2: P/S (Q51-100)', 'EXAM', 'Exam review', 'Rest'],
+  // w28 Feb 15-21
+  ['Redo missed FL questions: C/P', 'Redo missed FL questions: B/B', 'Redo missed FL questions: P/S', 'CARS QBank + weak topics', 'Weak topics', 'Exam review', 'Rest'],
+  // w29 Feb 22-28
+  ['Review weak topics', 'Review high yield', 'P/S doc review', 'Weak topics', 'Review FL mistakes', 'Light review', 'Rest'],
+  // w30 Mar 1-7, test week
+  ['Review weak topics', 'Review high yield', 'Light review', "Pray / DON'T STUDY", 'MCAT', 'Sleep', 'Rest'],
 ];
 // Exams in the order they get taken. Each 'EXAM' slot on the schedule takes the next one not yet scored.
 export const EXAMS = [
@@ -105,13 +131,15 @@ export const EXAMS = [
 ];
 export const SEED_EXAMS = { diag: { date: '2026-07-25', cp: 125, cars: 126, bb: 126, ps: 127 } };
 export const MCAT_KEY_DATES = [
-  ['2026-11-22', '60-day reschedule deadline'],
-  ['2026-12-13', 'Last UWorld day, JW CARS ends'],
-  ['2026-12-14', 'AAMC phase starts (timed)'],
-  ['2026-12-22', '30-day deadline: keep Jan 21?'],
-  ['2027-01-11', '10-day deadline (last change)'],
-  ['2027-01-21', 'MCAT'],
-  ['2027-02-23', 'Scores released'],
+  ['2026-11-22', 'Move Jan 21 to Mar 6 by today (cheapest)'],
+  ['2027-01-03', 'Last UWorld day, JW CARS ends'],
+  ['2027-01-04', 'California: Anki + CARS only'],
+  ['2027-01-11', 'AAMC phase starts (timed)'],
+  ['2027-02-04', '30-day deadline: FLs under 512? move to Mar 19'],
+  ['2027-02-24', '10-day deadline (last change)'],
+  ['2027-03-06', 'MCAT'],
+  ['2027-04-06', 'Scores released'],
+  ['2027-05-01', 'Backup retake date (scores Jun 2)'],
 ];
 // CARS history from the old sheet: [date, seconds, questions, correct]
 export const SEED_CARS = [["2026-07-22",412,5,5],["2026-07-23",555,5,2],["2026-07-24",516,6,6],["2026-07-25",540,6,4],["2026-07-26",363,5,3],["2026-07-27",501,6,5],["2026-07-28",644,5,4],["2026-08-03",600,6,6],["2026-08-04",640,7,5],["2026-08-05",451,5,5],["2026-08-07",485,5,3],["2026-08-10",570,5,3],["2026-08-12",403,5,4],["2026-08-13",557,6,6],["2026-08-14",655,7,6],["2026-08-15",573,6,5],["2026-08-16",543,7,6],["2026-08-17",338,6,6],["2026-08-18",429,6,5],["2026-08-19",409,6,3],["2026-08-20",398,5,3],["2026-08-26",441,7,6],["2026-08-27",431,6,6],["2026-08-28",355,5,3],["2026-08-29",382,5,3],["2026-08-30",604,6,4],["2026-08-31",516,5,3],["2026-09-03",447,6,5],["2026-09-04",519,7,4],["2026-09-05",518,5,5],["2026-09-07",537,6,6],["2026-09-08",473,5,5]];

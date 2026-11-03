@@ -1,6 +1,6 @@
 import * as store from './store.js';
 import * as C from './calc.js';
-import { PROGRAM, ROTATION, MAIN_LIFTS, QUOTES, EXAMS, SEED_EXAMS, SEED_CARS, SEED_WEIGHTS, MCAT_KEY_DATES, DEFAULT_SETTINGS } from './data.js';
+import { PROGRAM, ROTATION, MAIN_LIFTS, QUOTES, EXAMS, SEED_EXAMS, SEED_CARS, SEED_WEIGHTS, MCAT_KEY_DATES, MCAT_AAMC_START, DEFAULT_SETTINGS } from './data.js';
 import { renderIcon, ICON_NAMES } from './icons.js';
 import { renderPlan, handlePlan, todaysBlocks, todaysEvents, planSettings, clock as clk } from './planner.js';
 
@@ -225,7 +225,7 @@ function blocksCard(date) {
 }
 
 function mcatChecks(date, d, task, s) {
-  const cars = s.mcatDate && date > '2026-12-13' ? 'AAMC CARS QBank' : 'Jack Westin daily passage';
+  const cars = date >= MCAT_AAMC_START ? 'AAMC CARS QBank' : 'Jack Westin daily passage';
   const items = {
     cars: [cars, `<div class="extra" data-stop>
       <label class="field"><span class="tiny">Qs</span><input type="number" inputmode="numeric" value="${d.carsQ ?? ''}" data-field="carsQ"></label>

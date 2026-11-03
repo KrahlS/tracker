@@ -13,7 +13,8 @@ export const dayOfYear = s => diffDays(s, s.slice(0, 4) + '-01-01');
 export const mondayOf = s => addDays(s, -((parse(s).getDay() + 6) % 7));
 
 export function settings() {
-  const s = store.get('settings', {});
+  const s = { ...store.get('settings', {}) };
+  if (s.mcatDate === '2027-01-21') delete s.mcatDate; // old date saved from Settings; moved to Mar 6
   return { ...DEFAULT_SETTINGS, ...s, phases: { ...DEFAULT_SETTINGS.phases, ...(s.phases || {}) }, meals: s.meals || DEFAULT_SETTINGS.meals };
 }
 export const dayDoc = date => store.get('day:' + date, {});
