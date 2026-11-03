@@ -75,18 +75,18 @@ export const DEFAULT_SETTINGS = {
   theme: 'dark',
 };
 
-// MCAT schedule from the spreadsheet, Mon..Sun. Week 10 starts 2026-10-12.
+// MCAT schedule from the spreadsheet, Mon..Sun. Sunday UWorld added for weeks 13-18 (2026-11-03). Week 10 starts 2026-10-12.
 export const MCAT_FIRST_WEEK = 10;
 export const MCAT_WEEKS = [
   ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'Rest'],
   ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'Rest'],
   ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'Rest'],
-  ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'Rest'],
-  ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'Rest'],
-  ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'Rest'],
-  ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'Thanksgiving', 'Catch-up / lazy', 'Rest', 'Rest'],
-  ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'Rest'],
-  ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'Rest'],
+  ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'UWorld (60, untimed)'],
+  ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'UWorld (60, untimed)'],
+  ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'UWorld (60, untimed)'],
+  ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'Thanksgiving', 'Catch-up / lazy', 'Rest', 'UWorld (60, untimed)'],
+  ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'UWorld (60, untimed)'],
+  ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'UWorld (60, untimed)'],
   ['Chem QP (Q1-60)', 'Physics QP (Q1-60)', 'Bio QP 1 (Q1-60)', 'Bio QP 2 (Q1-60)', 'EXAM', 'Exam review', 'Rest'],
   ['Chem QP (Q61-120)', 'Physics QP (Q61-120)', 'Bio QP 1 (Q61-120)', 'Christmas Eve (off)', 'Christmas (off)', 'Bio QP 2 (Q61-120)', 'Rest'],
   ['Sec Bank 1: C/P (Q1-50)', 'Sec Bank 1: B/B (Q1-50)', 'Sec Bank 1: P/S (Q1-50)', 'Sec Bank 1: C/P (Q51-100)', "New Year's (off)", 'EXAM', 'Exam review'],
