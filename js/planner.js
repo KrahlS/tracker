@@ -16,11 +16,11 @@ export const PLAN_DEFAULTS = {
   start: '06:00', end: '22:00', buffer: 15,
   sleep: 8, lateAfter: '22:30', // late-night protection: hours of sleep after anything that runs past lateAfter
   liftDays: [0, 1, 3, 5],
-  dur: { lift: 75, uw: 180, uwSun: 240, exam: 480, review: 240, cars: 30, anki: 45, ps: 30 },
+  dur: { lift: 75, uw: 180, uwSun: 240, taper: 60, ankiTaper: 60, exam: 480, review: 240, cars: 30, anki: 45, ps: 30 },
   calendars: null, // null = every calendar you have selected in Google Calendar
   calId: null,
 };
-const DUR_LABEL = { lift: 'Lift', uw: 'UWorld / QBank block', uwSun: 'Sunday UWorld block', exam: 'Practice exam', review: 'Exam review', cars: 'CARS', anki: 'Anki', ps: 'Psych/Soc' };
+const DUR_LABEL = { lift: 'Lift', uw: 'UWorld / QBank block', uwSun: 'Sunday UWorld block', taper: 'Taper light review', ankiTaper: 'Taper Anki', exam: 'Practice exam', review: 'Exam review', cars: 'CARS', anki: 'Anki', ps: 'Psych/Soc' };
 
 const st = { week: 'this', busy: null, cals: null, plan: null, busyErr: '', working: false };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -47,6 +47,12 @@ function mcatBlocks(date, p) {
   const testDay = L === 'MCAT';
   const out = [];
   if (testDay) return [['note', 'MCAT test day', 0]];
+  // Taper week (Jan 14-20): ~1h Anki plus a short light review, no CARS/P-S/new questions.
+  if (/^taper/i.test(L)) {
+    if (!/anki only/i.test(L)) out.push(['uw', L.replace(/^taper: /i, 'Light: '), /nothing new/i.test(L) ? Math.round(p.dur.taper / 2) : p.dur.taper]);
+    out.push(['anki', 'Anki reviews (light week)', p.dur.ankiTaper]);
+    return out;
+  }
   const examDay = !!t.exam || /exam slot/i.test(L);
   if (examDay) out.push(['exam', `Practice exam: ${L}`, p.dur.exam]);
   else if (prev.exam || /exam review|review fl/i.test(L)) out.push(['review', `Exam review${prev.exam ? ': ' + prev.label : ''}`, p.dur.review]);
