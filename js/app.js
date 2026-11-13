@@ -10,7 +10,7 @@ const num = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null
 const fmt = (n, d = 1) => n == null ? '—' : (Math.round(n * 10 ** d) / 10 ** d).toString();
 const CHECK = '<svg><use href="#i-check"/></svg>';
 
-const ui = { view: 'today', date: C.today(), liftDay: null, liftDate: C.today(), mcatWeek: 0, repEdit: {}, pendingRender: false };
+const ui = { view: 'today', area: 'mcat', date: C.today(), liftDay: null, liftDate: C.today(), mcatWeek: 0, repEdit: {}, pendingRender: false };
 
 // ---------- seed starter data from the old spreadsheets ----------
 function seedAll() {
@@ -65,23 +65,92 @@ function chart({ series, wide = false, h = 200, xFmt, xTicks, yFmt = v => fmt(v,
 const dayNum = d => C.diffDays(d, '2026-01-01');
 const dayLabel = n => C.fmtDate(C.addDays('2026-01-01', Math.round(n)), { month: 'short', day: 'numeric' });
 
-// ---------- TODAY ----------
-function dayStatus(date) {
+// ---------- TODAY (shared pieces) ----------
+const mcatStatus = date => { const d = C.dayDoc(date); const n = C.MCAT_ITEMS.filter(([k]) => d[k]).length; return { n, of: C.MCAT_ITEMS.length }; };
+function gymStatus(date) {
   const d = C.dayDoc(date), p = C.phaseInfo(date);
   const dietOk = d.kcal != null && d.protein != null && d.kcal <= p.kcal && d.protein >= p.protein;
-  const items = [d.weight != null, dietOk, ...C.MCAT_ITEMS.map(([k]) => !!d[k])];
-  const n = items.filter(Boolean).length;
-  return { n, of: items.length };
+  const n = [d.weight != null, dietOk].filter(Boolean).length;
+  return { n, of: 2 };
 }
 
-function renderToday() {
-  const s = C.settings(), date = ui.date, t = C.today();
-  const d = C.dayDoc(date), p = C.phaseInfo(date, s);
+function hero(date, meta) {
   const doy = C.dayOfYear(date) + Number(date.slice(0, 4)) * 7;
-  const quote = QUOTES[doy % QUOTES.length];
-  const icon = ICON_NAMES[(doy * 7) % ICON_NAMES.length];
-  const task = C.mcatTask(date, s);
+  return `<div class="card hero">
+    <canvas class="heroicon" width="72" height="72" aria-hidden="true" data-seed="${doy}"></canvas>
+    <div>
+      <div class="tiny">${esc(C.fmtDate(date, { weekday: 'long', month: 'long', day: 'numeric' }))}</div>
+      <div class="quote">${esc(QUOTES[doy % QUOTES.length])}</div>
+      <div class="meta">${meta}</div>
+    </div>
+  </div>`;
+}
+function paintHero(root) {
+  const cv = $('.heroicon', root); if (!cv) return;
+  const doy = +cv.dataset.seed, css = getComputedStyle(document.documentElement);
+  renderIcon(cv, ICON_NAMES[(doy * 7) % ICON_NAMES.length], css.getPropertyValue('--ink').trim(), css.getPropertyValue('--panel').trim(), doy);
+}
+
+function datebar(date, st) {
+  const t = C.today();
+  return `<div class="datebar">
+    <button class="btn icon ghost" data-act="day-prev" aria-label="Previous day">‹</button>
+    <span class="d ${date !== t ? 'past' : ''}">${date === t ? 'Today' : esc(C.fmtDate(date))}</span>
+    <button class="btn icon ghost" data-act="day-next" aria-label="Next day" ${date >= t ? 'disabled' : ''}>›</button>
+    ${date !== t ? '<button class="btn sm ghost" data-act="day-today">Jump to today</button>' : ''}
+    <span class="spacer"></span>
+    <span class="tiny">${st.n}/${st.of} done</span>
+  </div>`;
+}
+
+function streakCard(date, status, legend) {
+  let dots = '';
+  for (let i = 13; i >= 0; i--) {
+    const dd = C.addDays(date, -i), st = status(dd);
+    dots += `<i class="${st.n === st.of ? 'full' : st.n ? 'half' : ''} ${i === 0 ? 'today' : ''}" title="${dd}: ${st.n}/${st.of}"></i>`;
+  }
+  return `<div class="card span2">
+    <h2>Last 14 days <span class="right">${C.streak(date, x => { const q = status(x); return q.n === q.of; })}-day perfect streak</span></h2>
+    <div class="dots">${dots}</div>
+    <div class="legend" style="margin-top:8px"><span>■ all done</span><span>▨ partial</span><span>□ nothing</span><span class="muted">${legend}</span></div>
+  </div>`;
+}
+
+// ---------- MCAT TODAY ----------
+function renderToday() {
+  const s = C.settings(), date = ui.date;
+  const d = C.dayDoc(date), task = C.mcatTask(date, s);
   const toMcat = C.diffDays(s.mcatDate, date);
+  const sc = C.examScores();
+  const nextExam = EXAMS.find(e => e.slot !== false && !C.examTotal(sc[e.id]));
+  const root = $('#v-today');
+  root.innerHTML = `
+  ${hero(date, `
+    <span>MCAT wk <b>${task.week}</b></span>
+    <span><b>${toMcat}</b> days to test</span>
+    <span>Goal <b>${s.goalScore}</b></span>
+    ${nextExam ? `<span>Next <b>${esc(nextExam.name)}</b></span>` : ''}`)}
+  ${datebar(date, mcatStatus(date))}
+  <div class="grid two">
+    <div class="card">
+      <h2>Study <span class="right">Wk ${task.week}</span></h2>
+      ${mcatChecks(date, d, task, s)}
+      <hr>
+      <div class="row between">
+        <label class="field"><label>Bedtime last night</label><input type="time" value="${d.bedtime ?? ''}" data-field="bedtime" data-text style="font-size:16px"></label>
+        ${sleepNote(d)}
+      </div>
+    </div>
+    ${blocksCard(date) || `<div class="card"><h2>Schedule</h2><p class="muted small">Nothing on the calendar yet. Build the week on the Plan tab.</p><div style="margin-top:10px"><button class="btn sm" data-go="plan">Open Plan</button></div></div>`}
+    ${streakCard(date, mcatStatus, 'CARS · Anki · P/S · UWorld')}
+  </div>`;
+  paintHero(root);
+}
+
+// ---------- GYM TODAY ----------
+function renderGym() {
+  const s = C.settings(), date = ui.date;
+  const d = C.dayDoc(date), p = C.phaseInfo(date, s);
   const ws = C.weights(), a7 = C.avg7(date, ws);
   const liftWeek = p.week;
 
@@ -93,39 +162,14 @@ function renderToday() {
   // lift
   const todays = C.sessions().filter(x => x.date === date);
   const next = C.nextDay();
+  const root = $('#v-gym');
 
-  // streak dots (last 14 days ending at viewed date)
-  let dots = '';
-  for (let i = 13; i >= 0; i--) {
-    const dd = C.addDays(date, -i), st = dayStatus(dd);
-    dots += `<i class="${st.n === st.of ? 'full' : st.n ? 'half' : ''} ${i === 0 ? 'today' : ''}" title="${dd}: ${st.n}/${st.of}"></i>`;
-  }
-  const st = dayStatus(date);
-
-  $('#v-today').innerHTML = `
-  <div class="card hero">
-    <canvas id="heroicon" width="72" height="72" aria-hidden="true"></canvas>
-    <div>
-      <div class="tiny">${esc(C.fmtDate(date, { weekday: 'long', month: 'long', day: 'numeric' }))}</div>
-      <div class="quote">${esc(quote)}</div>
-      <div class="meta">
-        <span><b>${C.PHASE_LABEL[p.phase]}</b> wk ${Math.max(1, liftWeek)}</span>
-        ${p.deload ? '<span><b>Deload week</b></span>' : ''}
-        <span>MCAT wk <b>${task.week}</b></span>
-        <span><b>${toMcat}</b> days to test</span>
-        <span>Target <b>${fmt(p.target)}</b> lb</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="datebar">
-    <button class="btn icon ghost" data-act="day-prev" aria-label="Previous day">‹</button>
-    <span class="d ${date !== t ? 'past' : ''}">${date === t ? 'Today' : esc(C.fmtDate(date))}</span>
-    <button class="btn icon ghost" data-act="day-next" aria-label="Next day" ${date >= t ? 'disabled' : ''}>›</button>
-    ${date !== t ? '<button class="btn sm ghost" data-act="day-today">Jump to today</button>' : ''}
-    <span class="spacer"></span>
-    <span class="tiny">${st.n}/${st.of} done</span>
-  </div>
+  root.innerHTML = `
+  ${hero(date, `
+    <span><b>${C.PHASE_LABEL[p.phase]}</b> wk ${Math.max(1, liftWeek)}</span>
+    ${p.deload ? '<span><b>Deload week</b></span>' : ''}
+    <span>Target <b>${fmt(p.target)}</b> lb</span>`)}
+  ${datebar(date, gymStatus(date))}
 
   <div class="grid two three-lg">
     <div class="card">
@@ -139,11 +183,6 @@ function renderToday() {
       </div>
       <div class="verdict">${a7 == null ? '' : Math.abs(a7 - p.target) <= 1 ? '<span class="pill ok">On track</span>' : a7 > p.target ? '<span class="pill bad">Above target</span>' : '<span class="pill ok">Ahead</span>'}</div>
       <div class="tiny" style="margin-top:12px">Judge the 7-day trend, never one weigh-in.</div>
-      <hr>
-      <div class="row between">
-        <label class="field"><label>Bedtime last night</label><input type="time" value="${d.bedtime ?? ''}" data-field="bedtime" data-text style="font-size:16px"></label>
-        ${sleepNote(d)}
-      </div>
     </div>
 
     <div class="card">
@@ -173,11 +212,6 @@ function renderToday() {
     </div>
 
     <div class="card">
-      <h2>MCAT <span class="right">Wk ${task.week}</span></h2>
-      ${mcatChecks(date, d, task, s)}
-    </div>
-
-    <div class="card">
       <h2>Training <span class="right">${p.deload ? 'Deload' : 'Wk ' + Math.max(1, liftWeek)}</span></h2>
       ${todays.length ? todays.map(x => `
         <div class="row between"><div><b>${PROGRAM[x.day].name}</b><div class="small muted">${PROGRAM[x.day].focus}</div></div>
@@ -189,16 +223,9 @@ function renderToday() {
         <div class="row" style="margin-top:12px"><button class="btn solid" data-act="openlift" data-day="${next}">Start workout</button></div>`}
     </div>
 
-    ${blocksCard(date)}
-    <div class="card span2">
-      <h2>Last 14 days <span class="right">${C.streak(date, x => { const q = dayStatus(x); return q.n === q.of; })}-day perfect streak</span></h2>
-      <div class="dots">${dots}</div>
-      <div class="legend" style="margin-top:8px"><span>■ all done</span><span>▨ partial</span><span>□ nothing</span></div>
-    </div>
+    ${streakCard(date, gymStatus, 'weigh-in · diet')}
   </div>`;
-  const cv = $('#heroicon');
-  const css = getComputedStyle(document.documentElement);
-  renderIcon(cv, icon, css.getPropertyValue('--ink').trim(), css.getPropertyValue('--panel').trim(), doy);
+  paintHero(root);
 }
 
 // Hours between logged bedtime and the planner's day start, flagged when it's a short night.
@@ -233,7 +260,7 @@ function mcatChecks(date, d, task, s) {
       <label class="field"><span class="tiny">Time m:ss</span><input type="text" inputmode="numeric" placeholder="8:30" value="${d.carsT ? Math.floor(d.carsT / 60) + ':' + String(d.carsT % 60).padStart(2, '0') : ''}" data-field="carsT"></label></div>`],
     anki: ['All reviews due today', ''],
     ps: [`${s.psPagesTarget}-7 pages`, `<div class="extra" data-stop><label class="field"><span class="tiny">Pages</span><input type="number" inputmode="numeric" value="${d.psPages ?? ''}" data-field="psPages"></label></div>`],
-    uw: [task.label + (task.exam ? ' · log scores in MCAT' : ''), task.exam ? '' : `<div class="extra" data-stop>
+    uw: [task.label + (task.exam ? ' · log scores in Progress' : ''), task.exam ? '' : `<div class="extra" data-stop>
       <label class="field"><span class="tiny">Qs done</span><input type="number" inputmode="numeric" value="${d.uwQ ?? ''}" data-field="uwQ"></label>
       <label class="field"><span class="tiny">% correct</span><input type="number" inputmode="numeric" value="${d.uwPct ?? ''}" data-field="uwPct"></label></div>`],
   };
@@ -497,7 +524,7 @@ function renderBody() {
     <div class="card span2">
       <h2>Diet, last 14 days <span class="right">${logged ? `kcal ${hitK}/${logged} · protein ${hitP}/${logged}` : ''}</span></h2>
       ${kcalPts.length > 1 ? `<div class="grid two"><div><div class="tiny">Calories vs ${pNow.kcal}</div>${chart({ series: [{ pts: kcalPts.map(p => [p[0], pNow.kcal]), cls: 'ln2' }, { pts: kcalPts, dots: 'solid' }], h: 140, xFmt: dayLabel })}</div><div><div class="tiny">Protein vs ${pNow.protein}</div>${chart({ series: [{ pts: protPts.map(p => [p[0], pNow.protein]), cls: 'ln2' }, { pts: protPts, dots: 'solid' }], h: 140, xFmt: dayLabel })}</div></div>` : ''}
-      ${diet ? `<div class="scroll-x"><table class="tbl"><tr><th>Day</th><th class="num">kcal</th><th class="num">Protein</th><th></th><th></th></tr>${diet}</table></div>` : '<p class="muted small">Log calories and protein on the Today tab.</p>'}
+      ${diet ? `<div class="scroll-x"><table class="tbl"><tr><th>Day</th><th class="num">kcal</th><th class="num">Protein</th><th></th><th></th></tr>${diet}</table></div>` : '<p class="muted small">Log calories and protein on the Gym Today tab.</p>'}
     </div>
   </div>`;
 }
@@ -646,6 +673,7 @@ function renderSettings() {
 `;
   const ph = k => `<tr><td>${C.PHASE_LABEL[k]}</td><td class="num"><input type="number" style="width:70px" value="${s.phases[k].kcal}" data-set="phases.${k}.kcal"></td><td class="num"><input type="number" style="width:60px" value="${s.phases[k].protein}" data-set="phases.${k}.protein"></td></tr>`;
   $('#v-settings').innerHTML = `
+  <h2 class="group-h">General</h2>
   <div class="grid two">
     <div class="card"><h2>Sync</h2>${syncBox}</div>
     <div class="card">
@@ -655,28 +683,42 @@ function renderSettings() {
       <h2>Backup</h2>
       <div class="row"><button class="btn sm" data-act="export">Export JSON</button><label class="btn sm ghost">Import<input type="file" accept="application/json" data-act="import" hidden></label></div>
     </div>
+  </div>
+
+  <h2 class="group-h">MCAT</h2>
+  <div class="grid two">
     <div class="card">
-      <h2>Diet targets</h2>
-      <table class="tbl"><tr><th>Phase</th><th class="num">kcal</th><th class="num">Protein g</th></tr>${ph('cut')}${ph('reverse')}${ph('bulk')}</table>
-      <p class="tiny" style="margin-top:8px">Reverse ramps from the cut number to this one.</p>
-      <hr>
-      <h2>Quick-add meals</h2>
-      <table class="tbl"><tr><th>Name</th><th class="num">kcal</th><th class="num">P</th><th></th></tr>
-      ${s.meals.map((m, i) => `<tr><td><input type="text" style="width:100%;font-size:14px;text-align:left" value="${esc(m.name)}" data-meal="${i}" data-f="name"></td><td class="num"><input type="number" style="width:60px" value="${m.kcal}" data-meal="${i}" data-f="kcal"></td><td class="num"><input type="number" style="width:50px" value="${m.protein}" data-meal="${i}" data-f="protein"></td><td class="num"><button class="btn sm ghost" data-act="delmeal" data-i="${i}">×</button></td></tr>`).join('')}
-      </table>
-      <div style="margin-top:8px"><button class="btn sm" data-act="addmeal">Add meal</button></div>
+      <h2>Test</h2>
+      <div class="grid two">
+        <label class="field"><label>MCAT goal score</label><input type="number" value="${s.goalScore}" data-set="goalScore"></label>
+        <label class="field"><label>MCAT date</label><input type="date" value="${s.mcatDate}" data-set="mcatDate"></label>
+        <label class="field"><label>MCAT week 11 starts</label><input type="date" value="${s.mcatWeek11Start}" data-set="mcatWeek11Start"></label>
+      </div>
+      <p class="tiny" style="margin-top:8px">Study block lengths and calendar rules live on the Plan tab.</p>
     </div>
+  </div>
+
+  <h2 class="group-h">Gym <small>diet, weight, lifting</small></h2>
+  <div class="grid two">
     <div class="card">
-      <h2>Plan</h2>
+      <h2>Cut plan</h2>
       <div class="grid two">
         <label class="field"><label>Program start (week 1)</label><input type="date" value="${s.programStart}" data-set="programStart"></label>
         <label class="field"><label>Start weight</label><input type="number" step="0.1" value="${s.startWeight}" data-set="startWeight"></label>
         <label class="field"><label>Cut goal</label><input type="number" step="0.1" value="${s.cutGoal}" data-set="cutGoal"></label>
         <label class="field"><label>Cut weeks</label><input type="number" value="${s.cutWeeks}" data-set="cutWeeks"></label>
-        <label class="field"><label>MCAT goal score</label><input type="number" value="${s.goalScore}" data-set="goalScore"></label>
-        <label class="field"><label>MCAT date</label><input type="date" value="${s.mcatDate}" data-set="mcatDate"></label>
-        <label class="field"><label>MCAT week 11 starts</label><input type="date" value="${s.mcatWeek11Start}" data-set="mcatWeek11Start"></label>
       </div>
+      <hr>
+      <h2>Diet targets</h2>
+      <table class="tbl"><tr><th>Phase</th><th class="num">kcal</th><th class="num">Protein g</th></tr>${ph('cut')}${ph('reverse')}${ph('bulk')}</table>
+      <p class="tiny" style="margin-top:8px">Reverse ramps from the cut number to this one.</p>
+    </div>
+    <div class="card">
+      <h2>Quick-add meals</h2>
+      <table class="tbl"><tr><th>Name</th><th class="num">kcal</th><th class="num">P</th><th></th></tr>
+      ${s.meals.map((m, i) => `<tr><td><input type="text" style="width:100%;font-size:14px;text-align:left" value="${esc(m.name)}" data-meal="${i}" data-f="name"></td><td class="num"><input type="number" style="width:60px" value="${m.kcal}" data-meal="${i}" data-f="kcal"></td><td class="num"><input type="number" style="width:50px" value="${m.protein}" data-meal="${i}" data-f="protein"></td><td class="num"><button class="btn sm ghost" data-act="delmeal" data-i="${i}">×</button></td></tr>`).join('')}
+      </table>
+      <div style="margin-top:8px"><button class="btn sm" data-act="addmeal">Add meal</button></div>
     </div>
     <div class="card span2">
       <h2>Starting weights <span class="right">used until you log a session</span></h2>
@@ -702,7 +744,15 @@ function saveSetting(path, val) {
 }
 
 // ---------- router + events ----------
-const RENDER = { today: renderToday, lift: renderLift, body: renderBody, mcat: renderMcat, plan: () => renderPlan($('#v-plan')), settings: renderSettings };
+const RENDER = { today: renderToday, plan: () => renderPlan($('#v-plan')), mcat: renderMcat, gym: renderGym, lift: renderLift, body: renderBody, settings: renderSettings };
+// Two sections, each with its own tabs. Setup is shared and sits at the end of both.
+const AREAS = {
+  mcat: [['today', 'i-today', 'Today'], ['plan', 'i-plan', 'Plan'], ['mcat', 'i-mcat', 'Progress']],
+  gym: [['gym', 'i-today', 'Today'], ['lift', 'i-lift', 'Lift'], ['body', 'i-body', 'Weight']],
+};
+const areaOf = v => Object.keys(AREAS).find(a => AREAS[a].some(([k]) => k === v));
+const lastView = { mcat: 'today', gym: 'gym' };
+try { Object.assign(lastView, JSON.parse(localStorage.getItem('forge:lastview') || '{}')); } catch {}
 function render() {
   const a = document.activeElement;
   if (a && a.closest('main') && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && a.type !== 'checkbox') { ui.pendingRender = true; return; }
@@ -713,10 +763,20 @@ function render() {
   dot.querySelector('span').textContent = { local: 'This device', 'signed-out': 'Sign in', connecting: 'Syncing', synced: 'Synced', offline: 'Offline', error: 'Sync error' }[sy.state];
   $('#topdate').textContent = C.fmtDate(C.today(), { month: 'short', day: 'numeric' });
 }
+function renderNav() {
+  $('#tabs').innerHTML = [...AREAS[ui.area], ['settings', 'i-gear', 'Setup']].map(([k, ic, label]) =>
+    `<button data-go="${k}" class="${k === ui.view ? 'active' : ''}"><svg><use href="#${ic}"/></svg>${label}</button>`).join('');
+  document.querySelectorAll('#area button').forEach(b => b.classList.toggle('active', b.dataset.area === ui.area));
+}
 function go(view) {
   ui.view = view;
+  const area = areaOf(view);
+  if (area) {
+    ui.area = area; lastView[area] = view;
+    try { localStorage.setItem('forge:lastview', JSON.stringify(lastView)); localStorage.setItem('forge:area', area); } catch {}
+  }
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'v-' + view));
-  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.go === view));
+  renderNav();
   if (location.hash !== '#' + view) history.replaceState(null, '', '#' + view);
   render();
   window.scrollTo(0, 0);
@@ -731,6 +791,8 @@ function parseMmss(v) {
 document.addEventListener('click', async e => {
   const nav = e.target.closest('[data-go]');
   if (nav) { go(nav.dataset.go); return; }
+  const area = e.target.closest('[data-area]');
+  if (area) { go(lastView[area.dataset.area] || AREAS[area.dataset.area][0][0]); return; }
   if (e.target.closest('[data-stop]')) return;
   const el = e.target.closest('[data-act]');
   if (!el || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') return;
@@ -814,7 +876,11 @@ setInterval(() => { const t = C.today(); if (t !== lastDay) { if (ui.date === la
 
 await store.initSync();
 seedAll();
+// open where you left off: the hash if there is one, otherwise the last section used (MCAT by default)
 const start = location.hash.slice(1);
-go(RENDER[start] ? start : 'today');
+let startArea = 'mcat';
+try { startArea = AREAS[localStorage.getItem('forge:area')] ? localStorage.getItem('forge:area') : 'mcat'; } catch {}
+ui.area = startArea;
+go(RENDER[start] ? start : AREAS[startArea][0][0]);
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
