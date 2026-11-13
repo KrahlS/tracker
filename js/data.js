@@ -75,7 +75,7 @@ export const DEFAULT_SETTINGS = {
   theme: 'dark',
 };
 
-// MCAT schedule from the spreadsheet, Mon..Sun. Sunday UWorld added for weeks 13-18; California trip Dec 27-Jan 3 is Anki + CARS only (2026-11-03). Section Bank (~720 Qs) at 60/day: B/B + C/P Dec 14-26, P/S Jan 4-7; FL4 Dec 18, FL5 Jan 8, FL6 Jan 11; QPs mostly dropped, Bio Jan 10 + Chem/Phys Jan 13 optional (2026-11-13); Jan 14-20 light taper, nothing new Jan 18-20 (2026-11-13). Week 10 starts 2026-10-12.
+// MCAT schedule from the spreadsheet, Mon..Sun. Sunday UWorld added for weeks 13-18; California trip Dec 27-Jan 3 is Anki + CARS only (2026-11-03). Section Bank (600 Qs, 200/section) at 60/day Dec 14-Jan 5, B/B + C/P first then P/S; FL4 Dec 18, FL5 Jan 8, FL6 Jan 11; AAMC QPs at 60/day Jan 6-7, plus optional Jan 10 + Jan 13 (2026-11-13); Jan 14-20 light taper, nothing new Jan 18-20 (2026-11-13). Week 10 starts 2026-10-12.
 export const MCAT_FIRST_WEEK = 10;
 export const MCAT_WEEKS = [
   ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'Rest'],
@@ -88,10 +88,10 @@ export const MCAT_WEEKS = [
   ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'UWorld (60, untimed)'],
   ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'UWorld (60, untimed)'],
   ['Sec Bank: B/B (Q1-60)', 'Sec Bank: C/P (Q1-60)', 'Sec Bank: B/B (Q61-120)', 'Sec Bank: C/P (Q61-120)', 'EXAM', 'Exam review', 'Rest'],
-  ['Sec Bank: B/B (Q121-180)', 'Sec Bank: C/P (Q121-180)', 'Sec Bank: B/B (Q181-240)', 'Christmas Eve (off)', 'Christmas (off)', 'Sec Bank: C/P (Q181-240)', 'Rest (travel to California)'],
+  ['Sec Bank: B/B (Q121-180)', 'Sec Bank: C/P (Q121-180)', 'Sec Bank: B/B (Q181-200) + C/P (Q181-200) + P/S (Q1-20)', 'Christmas Eve (off)', 'Christmas (off)', 'Sec Bank: P/S (Q21-80)', 'Rest (travel to California)'],
   ['California: Anki + CARS', 'California: Anki + CARS', 'California: Anki + CARS', 'California: Anki + CARS', "New Year's (off)", 'California: Anki + CARS', 'Rest (travel home)'],
-  ['Sec Bank: P/S (Q1-60)', 'Sec Bank: P/S (Q61-120)', 'Sec Bank: P/S (Q121-180)', 'Sec Bank: P/S (Q181-240)', 'EXAM', 'Exam review', 'AAMC Bio QP (60 Qs, optional)'],
-  ['EXAM', 'Exam review', 'AAMC Chem/Phys QP (60 Qs, optional), last new Qs', 'Taper: light review (weak topics, missed Qs)', 'Taper: light review (weak topics, missed Qs)', 'Taper: light review (weak topics, missed Qs)', 'Taper: light review (weak topics, missed Qs)'],
+  ['Sec Bank: P/S (Q81-140)', 'Sec Bank: P/S (Q141-200), Section Bank done', 'AAMC Bio QP 1 (Q1-60)', 'AAMC Chem QP (Q1-60)', 'EXAM', 'Exam review', 'AAMC Bio QP 2 (Q1-60, optional)'],
+  ['EXAM', 'Exam review', 'AAMC Physics QP (Q1-60, optional), last new Qs', 'Taper: light review (weak topics, missed Qs)', 'Taper: light review (weak topics, missed Qs)', 'Taper: light review (weak topics, missed Qs)', 'Taper: light review (weak topics, missed Qs)'],
   ['Taper: skim notes, nothing new', 'Taper: skim notes, nothing new', 'Taper: Anki only, early night', 'MCAT', 'Sleep', 'Rest', 'Rest'],
 ];
 // Exams in the order they get taken. Each 'EXAM' slot on the schedule takes the next one not yet scored.
@@ -112,7 +112,8 @@ export const MCAT_KEY_DATES = [
   ['2026-12-14', 'AAMC phase: Section Bank starts (60/day)'],
   ['2026-12-22', '30-day deadline: keep Jan 21?'],
   ['2026-12-27', 'California trip: Anki + CARS only'],
-  ['2027-01-04', 'Back home: Section Bank P/S'],
+  ['2027-01-04', 'Back home: finish Section Bank P/S'],
+  ['2027-01-06', 'AAMC question packs'],
   ['2027-01-11', 'FL 6 + 10-day deadline (last change)'],
   ['2027-01-13', 'Last new questions'],
   ['2027-01-14', 'Light taper week starts'],
