@@ -56,7 +56,7 @@ function mcatBlocks(date, p) {
   const examDay = !!t.exam || /exam slot/i.test(L);
   if (examDay) out.push(['exam', `Practice exam: ${L}`, p.dur.exam]);
   else if (prev.exam || /exam review|review fl/i.test(L)) out.push(['review', `Exam review${prev.exam ? ': ' + prev.label : ''}`, p.dur.review]);
-  else if (/uworld|qp|sec bank|review|catch-up/i.test(L)) out.push(['uw', L.replace('(60, untimed)', '60 Qs untimed'), /light/i.test(L) ? Math.round(p.dur.uw * 2 / 3) : C.parse(date).getDay() === 0 ? p.dur.uwSun : p.dur.uw]);
+  else if (/uworld|qp|sec bank|review|catch-up/i.test(L)) out.push(['uw', L.replace('(60, untimed)', '60 Qs untimed'), /light/i.test(L) ? Math.round(p.dur.uw * 2 / 3) : C.parse(date).getDay() === 0 && /uworld/i.test(L) ? p.dur.uwSun : p.dur.uw]);
   if (!off && !examDay) {
     out.push(['cars', date > '2026-12-13' ? 'CARS: AAMC QBank' : 'CARS: Jack Westin passage', p.dur.cars]);
     out.push(['ps', 'Psych/Soc 6-7 pages', p.dur.ps]);
