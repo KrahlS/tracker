@@ -15,6 +15,7 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 export const PLAN_DEFAULTS = {
   start: '06:00', end: '22:00', buffer: 15,
   sleep: 8, lateAfter: '22:30', // late-night protection: hours of sleep after anything that runs past lateAfter
+  planLifts: false, // gym is on the back burner: lifts only go on the calendar when switched on
   liftDays: [0, 1, 3, 5],
   dur: { lift: 75, uw: 180, uwSun: 240, carsPassage: 15, taper: 60, ankiTaper: 60, exam: 480, review: 240, cars: 30, anki: 45, ps: 30 },
   calendars: null, // null = every calendar you have selected in Google Calendar
@@ -85,10 +86,10 @@ function liftDates(mon, p) {
 
 export function buildPlan(busy) {
   const p = planSettings(), mon = weekStart(), now = new Date();
-  const lifts = liftDates(mon, p);
+  const lifts = p.planLifts ? liftDates(mon, p) : [];
   let rot = ROTATION.indexOf(C.nextDay());
   // next week continues the rotation after the lifts still planned for this week
-  if (st.week === 'next') rot += liftDates(C.mondayOf(C.today()), p).length;
+  if (st.week === 'next' && p.planLifts) rot += liftDates(C.mondayOf(C.today()), p).length;
   const days = [];
   for (let i = 0; i < 7; i++) {
     const date = C.addDays(mon, i);
@@ -247,7 +248,7 @@ export function renderPlan(root) {
       <p class="small muted" style="margin-top:10px">${!canCal ? 'Calendar connects once sync is set up (Setup tab). This preview ignores your other events until then.'
         : st.busyErr ? 'Calendar error: ' + esc(st.busyErr)
         : st.busy ? `Fitted around ${st.busy.length} events from your calendars.${st.calErrs?.length ? ' Could not read ' + esc(st.calErrs.join('; ')) + '.' : ''}` : 'Preview ignores your events until you read your calendar.'}
-        Lifts go first thing in the morning, but never sooner than ${p.sleep} hours after a night that ran past ${p.lateAfter}; the day after a practice exam gets a ${p.dur.review / 60}-hour review. Re-running replaces only Forge's own blocks.</p>
+        ${p.planLifts ? 'Lifts go first thing in the morning, but nothing starts' : 'Nothing starts'} sooner than ${p.sleep} hours after a night that ran past ${p.lateAfter}; the day after a practice exam gets a ${p.dur.review / 60}-hour review. Re-running replaces only Forge's own blocks.</p>
       ${dayHtml}
     </div>
     <div class="card">
@@ -259,13 +260,14 @@ export function renderPlan(root) {
         <label class="field"><label>Sleep after late nights (h)</label><input type="number" step="0.5" value="${p.sleep}" data-plan="sleep"></label>
         <label class="field"><label>Late means past</label><input type="time" value="${p.lateAfter}" data-plan="lateAfter"></label>
       </div>
-      <div class="tiny" style="margin:14px 0 6px">Lift days</div>
+      <div class="check ${p.planLifts ? 'done' : ''}" data-act="planlifts" style="margin-top:14px"><span class="box"><svg><use href="#i-check"/></svg></span><span class="t"><b>Plan lifts too</b><span class="sub">Off keeps the calendar to MCAT only</span></span></div>
+      ${p.planLifts ? `<div class="tiny" style="margin:14px 0 6px">Lift days</div>
       <div class="row">${DAYS.map((n, i) => `<button class="toggle ${p.liftDays.includes(i) ? 'on' : ''}" data-act="liftdaypick" data-i="${i}">${n}</button>`).join('')}</div>
-      <p class="tiny" style="margin-top:6px">A lift on an exam day moves to the next open day.</p>
+      <p class="tiny" style="margin-top:6px">A lift on an exam day moves to the next open day.</p>` : ''}
     </div>
     <div class="card">
       <h2>Block lengths</h2>
-      <div class="grid two">${Object.keys(DUR_LABEL).map(durRow).join('')}</div>
+      <div class="grid two">${Object.keys(DUR_LABEL).filter(k => p.planLifts || k !== 'lift').map(durRow).join('')}</div>
     </div>
     ${st.cals ? `<div class="card span2"><h2>Calendars to plan around</h2>
       ${st.cals.map(c => { const on = p.calendars ? p.calendars.includes(c.id) : c.selected !== false; return `<div class="check ${on ? 'done' : ''}" data-act="calpick" data-id="${esc(c.id)}"><span class="box"><svg><use href="#i-check"/></svg></span><span class="t"><b>${esc(c.summaryOverride || c.summary)}</b></span></div>`; }).join('')}
@@ -278,6 +280,7 @@ export async function handlePlan(act, el, { toast, render }) {
   const replan = () => { st.plan = null; render(); };
   switch (act) {
     case 'planweek': st.week = el.dataset.v; st.busy = null; replan(); break;
+    case 'planlifts': savePlanSettings({ ...p, planLifts: !p.planLifts }); st.plan = null; break;
     case 'liftdaypick': {
       const i = +el.dataset.i;
       savePlanSettings({ ...p, liftDays: p.liftDays.includes(i) ? p.liftDays.filter(x => x !== i) : [...p.liftDays, i].sort() });

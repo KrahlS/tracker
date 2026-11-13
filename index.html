@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Forge</title>
-  <meta name="description" content="Daily tracker for diet, weight, lifting and MCAT study.">
+  <meta name="description" content="Daily tracker for MCAT study, with a separate gym section for diet, weight and lifting.">
   <meta name="theme-color" content="#0b0b0b">
   <meta name="apple-mobile-web-app-title" content="Forge">
   <link rel="manifest" href="manifest.webmanifest">
@@ -32,20 +32,18 @@
 
   <header class="top">
     <div class="logo">Forge<small id="topdate"></small></div>
+    <div class="area" id="area" role="tablist" aria-label="Section">
+      <button data-area="mcat" class="active">MCAT</button>
+      <button data-area="gym">Gym</button>
+    </div>
     <button class="sync-dot" id="syncdot" data-go="settings"><i></i><span>Local</span></button>
   </header>
 
-  <nav class="tabs" id="tabs">
-    <button data-go="today" class="active"><svg><use href="#i-today"/></svg>Today</button>
-    <button data-go="lift"><svg><use href="#i-lift"/></svg>Lift</button>
-    <button data-go="body"><svg><use href="#i-body"/></svg>Body</button>
-    <button data-go="mcat"><svg><use href="#i-mcat"/></svg>MCAT</button>
-    <button data-go="plan"><svg><use href="#i-plan"/></svg>Plan</button>
-    <button data-go="settings"><svg><use href="#i-gear"/></svg>Setup</button>
-  </nav>
+  <nav class="tabs" id="tabs"></nav>
 
   <main>
     <section class="view active" id="v-today"></section>
+    <section class="view" id="v-gym"></section>
     <section class="view" id="v-lift"></section>
     <section class="view" id="v-body"></section>
     <section class="view" id="v-mcat"></section>
