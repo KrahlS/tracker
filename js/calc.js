@@ -93,12 +93,22 @@ export function examScores() { return store.get('exams', {}); }
 const examDone = (id, sc) => sc[id] && sc[id].cp && sc[id].cars && sc[id].bb && sc[id].ps;
 // The scheduled task for a date. Exam slots take the next exam that has no score yet.
 // Daily CARS work: Jack Westin through Dec 13, then the AAMC CARS Question Packs (Vol 1 in Dec + California, Vol 2 in Jan).
+// All 98 AAMC CARS QP passages land by Jan 13: 26 in Dec, 30 in California, 6 on Jan 4-5, 4 on FL review days, 32 in CARS blocks.
+export function carsPassages(date) {
+  if (date <= '2026-12-13' || date >= '2027-01-14') return 1;
+  const L = mcatTask(date).label;
+  const n = L.match(/^cars qp \((?:last )?(\d+) passages/i);
+  if (n) return +n[1];
+  if (/^california/i.test(L)) return 6;
+  if (/exam review/i.test(L)) return 2;
+  return 3;
+}
 export function carsLabel(date) {
   if (date <= '2026-12-13') return 'Jack Westin daily passage';
+  if (date >= '2027-01-14') return 'Optional (taper week)';
   const L = mcatTask(date).label;
   if (/^cars qp/i.test(L)) return 'AAMC ' + L;
-  if (date >= '2027-01-14') return 'Optional (taper week)';
-  return `AAMC CARS QP Vol ${date < '2027-01-04' ? 1 : 2}: ${/^california/i.test(L) ? '2-3 passages' : '1 passage'}`;
+  return `AAMC CARS QP: ${carsPassages(date)} passages`;
 }
 
 export function mcatTask(date, s = settings()) {
