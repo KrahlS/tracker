@@ -10,7 +10,7 @@ const num = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null
 const fmt = (n, d = 1) => n == null ? '—' : (Math.round(n * 10 ** d) / 10 ** d).toString();
 const CHECK = '<svg><use href="#i-check"/></svg>';
 
-const ui = { view: 'today', date: C.today(), liftDay: null, liftDate: C.today(), repEdit: {}, pendingRender: false };
+const ui = { view: 'today', date: C.today(), liftDay: null, liftDate: C.today(), mcatWeek: 0, repEdit: {}, pendingRender: false };
 
 // ---------- seed starter data from the old spreadsheets ----------
 function seedAll() {
@@ -505,14 +505,17 @@ function renderBody() {
 // ---------- MCAT ----------
 function renderMcat() {
   const s = C.settings(), t = C.today();
-  const mon = C.mondayOf(t);
-  const task = C.mcatTask(t, s);
+  // week grid pages ‹ › from this week through the test week
+  const thisMon = C.mondayOf(t), lastMon = C.mondayOf(s.mcatDate || t);
+  const mon = C.addDays(thisMon, 7 * ui.mcatWeek);
+  const task = C.mcatTask(t, s), wkNo = C.mcatTask(mon, s).week;
   let week = '';
   for (let i = 0; i < 7; i++) {
     const d = C.addDays(mon, i), x = C.dayDoc(d), tk = C.mcatTask(d, s);
     week += `<div class="wd ${d === t ? 'today' : ''} ${tk.exam ? 'exam' : ''}">
       <div class="h"><span>${C.fmtDate(d, { weekday: 'short' })}</span><span>${C.fmtDate(d, { day: 'numeric' })}</span></div>
       <div>${esc(tk.label)}</div>
+      ${d > '2026-12-13' && d < '2027-01-14' && !tk.exam && !/^(rest|christmas|new year)|\(off\)/i.test(tk.label) ? `<div class="tiny">CARS: ${esc(C.carsLabel(d).replace(/^AAMC (CARS QP:? ?)?/, ''))}</div>` : ''}
       <div class="marks">${C.MCAT_ITEMS.map(([k, n]) => `<i class="${x[k] ? 'on' : ''}" title="${n}"></i>`).join('')}</div>
     </div>`;
   }
@@ -572,7 +575,13 @@ function renderMcat() {
   $('#v-mcat').innerHTML = `
   <div class="grid two">
     <div class="card span2">
-      <h2>Week ${task.week} <span class="right">${C.diffDays(s.mcatDate, t)} days to test · ${C.fmtDate(s.mcatDate, { month: 'short', day: 'numeric' })}</span></h2>
+      <h2>Week ${wkNo} <span class="right">${C.diffDays(s.mcatDate, t)} days to test · ${C.fmtDate(s.mcatDate, { month: 'short', day: 'numeric' })}</span></h2>
+      <div class="datebar">
+        <button class="btn icon ghost" data-act="mweek-prev" aria-label="Previous week">‹</button>
+        <span class="d ${ui.mcatWeek ? 'past' : ''}">${ui.mcatWeek ? '' : 'This week · '}${esc(C.fmtDate(mon, { month: 'short', day: 'numeric' }))} – ${esc(C.fmtDate(C.addDays(mon, 6), { month: 'short', day: 'numeric' }))}</span>
+        <button class="btn icon ghost" data-act="mweek-next" aria-label="Next week" ${mon >= lastMon ? 'disabled' : ''}>›</button>
+        ${ui.mcatWeek ? '<button class="btn sm ghost" data-act="mweek-now">This week</button>' : ''}
+      </div>
       <div class="week">${week}</div>
       <p class="tiny" style="margin-top:10px">Marks: CARS · Anki · Psych/Soc · practice block. Exam slots take the next exam you haven't scored.</p>
     </div>
@@ -731,6 +740,9 @@ document.addEventListener('click', async e => {
     case 'day-prev': ui.date = C.addDays(ui.date, -1); render(); break;
     case 'day-next': ui.date = C.addDays(ui.date, 1); render(); break;
     case 'day-today': ui.date = C.today(); render(); break;
+    case 'mweek-prev': ui.mcatWeek--; render(); break;
+    case 'mweek-next': ui.mcatWeek++; render(); break;
+    case 'mweek-now': ui.mcatWeek = 0; render(); break;
     case 'toggle': { const d = C.dayDoc(date); C.patchDay(date, { [el.dataset.k]: !d[el.dataset.k] }); break; }
     case 'meal': { const m = C.settings().meals[+el.dataset.i], d = C.dayDoc(date); C.patchDay(date, { kcal: (d.kcal || 0) + m.kcal, protein: (d.protein || 0) + m.protein }); toast('+ ' + m.name); break; }
     case 'addfood': { const k = num($('#addk').value) || 0, p = num($('#addp').value) || 0; if (!k && !p) return; const d = C.dayDoc(date); C.patchDay(date, { kcal: (d.kcal || 0) + k, protein: (d.protein || 0) + p }); break; }
