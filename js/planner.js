@@ -16,11 +16,11 @@ export const PLAN_DEFAULTS = {
   start: '06:00', end: '22:00', buffer: 15,
   sleep: 8, lateAfter: '22:30', // late-night protection: hours of sleep after anything that runs past lateAfter
   liftDays: [0, 1, 3, 5],
-  dur: { lift: 75, uw: 180, uwSun: 240, carsQp: 120, carsTrip: 60, taper: 60, ankiTaper: 60, exam: 480, review: 240, cars: 30, anki: 45, ps: 30 },
+  dur: { lift: 75, uw: 180, uwSun: 240, carsPassage: 15, taper: 60, ankiTaper: 60, exam: 480, review: 240, cars: 30, anki: 45, ps: 30 },
   calendars: null, // null = every calendar you have selected in Google Calendar
   calId: null,
 };
-const DUR_LABEL = { lift: 'Lift', uw: 'UWorld / QBank block', uwSun: 'Sunday UWorld block', carsQp: 'CARS QP block (4-5 passages)', carsTrip: 'CARS on the California trip', taper: 'Taper light review', ankiTaper: 'Taper Anki', exam: 'Practice exam', review: 'Exam review', cars: 'CARS', anki: 'Anki', ps: 'Psych/Soc' };
+const DUR_LABEL = { lift: 'Lift', uw: 'UWorld / QBank block', uwSun: 'Sunday UWorld block', carsPassage: 'CARS QP, per passage incl. review', taper: 'Taper light review', ankiTaper: 'Taper Anki', exam: 'Practice exam', review: 'Exam review', cars: 'CARS', anki: 'Anki', ps: 'Psych/Soc' };
 
 const st = { week: 'this', busy: null, cals: null, plan: null, busyErr: '', working: false };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -56,12 +56,12 @@ function mcatBlocks(date, p) {
   // CARS QP Vol 2 days (Jan 6, 7, 10, 13): one long CARS block in place of the QBank block and the daily passage.
   const carsDay = /^cars qp/i.test(L);
   const examDay = !!t.exam || /exam slot/i.test(L);
-  if (carsDay) out.push(['cars', L, p.dur.carsQp]);
+  if (carsDay) out.push(['cars', L, C.carsPassages(date) * p.dur.carsPassage]);
   if (examDay) out.push(['exam', `Practice exam: ${L}`, p.dur.exam]);
   else if (prev.exam || /exam review|review fl/i.test(L)) out.push(['review', `Exam review${prev.exam ? ': ' + prev.label : ''}`, p.dur.review]);
   else if (!carsDay && /uworld|qp|sec bank|review|catch-up/i.test(L)) out.push(['uw', L.replace('(60, untimed)', '60 Qs untimed'), /light/i.test(L) ? Math.round(p.dur.uw * 2 / 3) : C.parse(date).getDay() === 0 && /uworld/i.test(L) ? p.dur.uwSun : p.dur.uw]);
   if (!off && !examDay) {
-    if (!carsDay) out.push(['cars', 'CARS: ' + C.carsLabel(date), /^california/i.test(L) ? p.dur.carsTrip : p.dur.cars]);
+    if (!carsDay) out.push(['cars', 'CARS: ' + C.carsLabel(date), date > '2026-12-13' ? C.carsPassages(date) * p.dur.carsPassage : p.dur.cars]);
     out.push(['ps', 'Psych/Soc 6-7 pages', p.dur.ps]);
   }
   out.push(['anki', 'Anki reviews', p.dur.anki]);
