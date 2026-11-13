@@ -75,7 +75,7 @@ export const DEFAULT_SETTINGS = {
   theme: 'dark',
 };
 
-// MCAT schedule from the spreadsheet, Mon..Sun. Sunday UWorld added for weeks 13-18; California trip Dec 27-Jan 3 is Anki + CARS only (2026-11-03). Jan 4-13 Section Bank (~720 Qs, B/B + C/P first, then P/S), FL5 Jan 8, FL6 Jan 11; Jan 14-20 light taper, nothing new Jan 18-20 (2026-11-13). Week 10 starts 2026-10-12.
+// MCAT schedule from the spreadsheet, Mon..Sun. Sunday UWorld added for weeks 13-18; California trip Dec 27-Jan 3 is Anki + CARS only (2026-11-03). Section Bank (~720 Qs) at 60/day: B/B + C/P Dec 14-26, P/S Jan 4-7; FL4 Dec 18, FL5 Jan 8, FL6 Jan 11; QPs mostly dropped, Bio Jan 10 + Chem/Phys Jan 13 optional (2026-11-13); Jan 14-20 light taper, nothing new Jan 18-20 (2026-11-13). Week 10 starts 2026-10-12.
 export const MCAT_FIRST_WEEK = 10;
 export const MCAT_WEEKS = [
   ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'Rest'],
@@ -87,11 +87,11 @@ export const MCAT_WEEKS = [
   ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'Thanksgiving', 'Catch-up / lazy', 'Rest', 'UWorld (60, untimed)'],
   ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'UWorld (60, untimed)'],
   ['UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'UWorld (60, untimed)', 'EXAM', 'Exam review', 'UWorld (60, untimed)'],
-  ['Chem QP (Q1-60)', 'Physics QP (Q1-60)', 'Bio QP 1 (Q1-60)', 'Bio QP 2 (Q1-60)', 'EXAM', 'Exam review', 'Rest'],
-  ['Chem QP (Q61-120)', 'Physics QP (Q61-120)', 'Bio QP 1 (Q61-120)', 'Christmas Eve (off)', 'Christmas (off)', 'Bio QP 2 (Q61-120)', 'Rest (travel to California)'],
+  ['Sec Bank: B/B (Q1-60)', 'Sec Bank: C/P (Q1-60)', 'Sec Bank: B/B (Q61-120)', 'Sec Bank: C/P (Q61-120)', 'EXAM', 'Exam review', 'Rest'],
+  ['Sec Bank: B/B (Q121-180)', 'Sec Bank: C/P (Q121-180)', 'Sec Bank: B/B (Q181-240)', 'Christmas Eve (off)', 'Christmas (off)', 'Sec Bank: C/P (Q181-240)', 'Rest (travel to California)'],
   ['California: Anki + CARS', 'California: Anki + CARS', 'California: Anki + CARS', 'California: Anki + CARS', "New Year's (off)", 'California: Anki + CARS', 'Rest (travel home)'],
-  ['Sec Bank: B/B (Q1-120)', 'Sec Bank: C/P (Q1-120)', 'Sec Bank: B/B (Q121-240)', 'Sec Bank: C/P (Q121-240)', 'EXAM', 'Exam review', 'Sec Bank: P/S (Q1-120)'],
-  ['EXAM', 'Exam review', 'Sec Bank: P/S (Q121-240), last new Qs', 'Taper: light review (weak topics, missed Qs)', 'Taper: light review (weak topics, missed Qs)', 'Taper: light review (weak topics, missed Qs)', 'Taper: light review (weak topics, missed Qs)'],
+  ['Sec Bank: P/S (Q1-60)', 'Sec Bank: P/S (Q61-120)', 'Sec Bank: P/S (Q121-180)', 'Sec Bank: P/S (Q181-240)', 'EXAM', 'Exam review', 'AAMC Bio QP (60 Qs, optional)'],
+  ['EXAM', 'Exam review', 'AAMC Chem/Phys QP (60 Qs, optional), last new Qs', 'Taper: light review (weak topics, missed Qs)', 'Taper: light review (weak topics, missed Qs)', 'Taper: light review (weak topics, missed Qs)', 'Taper: light review (weak topics, missed Qs)'],
   ['Taper: skim notes, nothing new', 'Taper: skim notes, nothing new', 'Taper: Anki only, early night', 'MCAT', 'Sleep', 'Rest', 'Rest'],
 ];
 // Exams in the order they get taken. Each 'EXAM' slot on the schedule takes the next one not yet scored.
@@ -109,10 +109,10 @@ export const SEED_EXAMS = { diag: { date: '2026-07-25', cp: 125, cars: 126, bb: 
 export const MCAT_KEY_DATES = [
   ['2026-11-22', '60-day reschedule deadline'],
   ['2026-12-13', 'Last UWorld day, JW CARS ends'],
-  ['2026-12-14', 'AAMC phase starts (timed)'],
+  ['2026-12-14', 'AAMC phase: Section Bank starts (60/day)'],
   ['2026-12-22', '30-day deadline: keep Jan 21?'],
   ['2026-12-27', 'California trip: Anki + CARS only'],
-  ['2027-01-04', 'Back home: Section Bank starts'],
+  ['2027-01-04', 'Back home: Section Bank P/S'],
   ['2027-01-11', 'FL 6 + 10-day deadline (last change)'],
   ['2027-01-13', 'Last new questions'],
   ['2027-01-14', 'Light taper week starts'],
