@@ -225,7 +225,7 @@ function blocksCard(date) {
 }
 
 function mcatChecks(date, d, task, s) {
-  const cars = s.mcatDate && date > '2026-12-13' ? 'AAMC CARS QBank' : 'Jack Westin daily passage';
+  const cars = C.carsLabel(date);
   const items = {
     cars: [cars, `<div class="extra" data-stop>
       <label class="field"><span class="tiny">Qs</span><input type="number" inputmode="numeric" value="${d.carsQ ?? ''}" data-field="carsQ"></label>
